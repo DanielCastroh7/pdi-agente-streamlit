@@ -22,6 +22,7 @@ from pdi_analyzer import run_full_analysis_process
 
 # --- CONFIGURAÇÃO INICIAL E FUNÇÕES AUXILIARES ---
 # **NOVO:** A função de inicialização agora mora aqui.
+# **NOVO:** A função de inicialização agora mora aqui.
 def initialize_firebase():
     """
     Inicializa o app do Firebase. Em produção (Streamlit Cloud), usa st.secrets.
@@ -282,7 +283,7 @@ def main():
         st.title("Bem-vindo ao PDI Agente 👨‍🚀")
         
         if not firebase_initialized:
-            st.error("Falha na conexão com o banco de dados. Verifique as credenciais do Firebase.")
+            st.error("Falha na conexão com o banco de dados. Verifique as credenciais do Firebase no Streamlit Cloud Secrets.")
             return
 
         login_tab, register_tab, forgot_tab = st.tabs(["Login", "Registrar", "Esqueci a Senha"])
