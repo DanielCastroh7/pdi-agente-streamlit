@@ -27,36 +27,15 @@ def initialize_firebase():
     Inicializa o app do Firebase. Em produção (Streamlit Cloud), usa st.secrets.
     Em desenvolvimento local, usa o arquivo firebase_service_account.json.
     """
-    if not firebase_admin._apps:
-        try:
-            # Tenta usar o Streamlit Secrets (para o ambiente online)
-            creds_json = {
-                "type": st.secrets["firebase"]["type"],
-                "project_id": st.secrets["firebase"]["project_id"],
-                "private_key_id": st.secrets["firebase"]["private_key_id"],
-                # **CORREÇÃO CRÍTICA:** Substitui os caracteres de escape \n por quebras de linha reais.
-                "private_key": st.secrets["firebase"]["private_key"].replace('\\n', '\n'),
-                "client_email": st.secrets["firebase"]["client_email"],
-                "client_id": st.secrets["firebase"]["client_id"],
-                "auth_uri": st.secrets["firebase"]["auth_uri"],
-                "token_uri": st.secrets["firebase"]["token_uri"],
-                "auth_provider_x509_cert_url": st.secrets["firebase"]["auth_provider_x509_cert_url"],
-                "client_x509_cert_url": st.secrets["firebase"]["client_x509_cert_url"]
-            }
-            cred = credentials.Certificate(creds_json)
-            print("Firebase App inicializado via Streamlit Secrets.")
-        except (AttributeError, KeyError, FileNotFoundError):
-            # Se st.secrets falhar, tenta usar o arquivo local (para desenvolvimento)
-            SERVICE_ACCOUNT_FILE = Path(__file__).parent / "firebase_service_account.json"
-            if SERVICE_ACCOUNT_FILE.exists():
-                cred = credentials.Certificate(str(SERVICE_ACCOUNT_FILE))
-                print("Firebase App inicializado via arquivo local.")
-            else:
-                print("ERRO: Credenciais do Firebase não encontradas no Streamlit Secrets nem como arquivo local.")
-                st.error("As credenciais do Firebase não estão configuradas. A aplicação não pode se conectar ao banco de dados.")
-                return
-
-        firebase_admin.initialize_app(cred)
+    # Se já estiver inicializado, retorna o app existente
+    try:
+        app = firebase_admin.get_app()
+    except ValueError:
+        # Pega o JSON do Secrets
+        cred_dict = json.loads(st.secrets["firebase_credentials"])
+        cred = credentials.Certificate(cred_dict)
+        app = firebase_admin.initialize_app(cred)
+    return app
 
 # A inicialização será chamada pelo app.py
 # initialize_firebase() 
@@ -64,11 +43,7 @@ def initialize_firebase():
 # --- FUNÇÕES DE AUTENTICAÇÃO E DADOS COM FIRESTORE ---
 
 def get_db():
-    if not firebase_admin._apps:  # Evita reinicialização
-        firebase_creds_str = st.secrets["firebase_credentials"]
-        firebase_creds_dict = json.loads(firebase_creds_str)
-        cred = credentials.Certificate(firebase_creds_dict)
-        firebase_admin.initialize_app(cred)
+    initialize_firebase()
     return firestore.client()
 
 def hash_password(password: str) -> str:
