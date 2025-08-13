@@ -20,10 +20,43 @@ except ImportError:
     EMAIL_SENDER = None
     EMAIL_PASSWORD = None
 
+# --- INICIALIZAÇÃO DO FIREBASE (PARA PRODUÇÃO E DESENVOLVIMENTO) ---
+
+def initialize_firebase():
+    """
+    Inicializa o app do Firebase. Em produção (Streamlit Cloud), usa st.secrets.
+    Em desenvolvimento local, usa o arquivo firebase_service_account.json.
+    """
+    if not firebase_admin._apps:
+        try:
+            # Tenta usar o Streamlit Secrets (para o ambiente online)
+            creds_json_str = st.secrets["firebase_credentials"]
+            creds_dict = json.loads(creds_json_str)
+            
+            # **CORREÇÃO DEFINITIVA:** Ajusta a formatação da chave privada APÓS carregar o JSON.
+            creds_dict['private_key'] = creds_dict['private_key'].replace('\\n', '\n')
+            
+            cred = credentials.Certificate(creds_dict)
+            print("Firebase App inicializado via Streamlit Secrets.")
+        except (AttributeError, KeyError, FileNotFoundError):
+            # Se st.secrets falhar, tenta usar o arquivo local (para desenvolvimento)
+            SERVICE_ACCOUNT_FILE = Path(__file__).parent / "firebase_service_account.json"
+            if SERVICE_ACCOUNT_FILE.exists():
+                cred = credentials.Certificate(str(SERVICE_ACCOUNT_FILE))
+                print("Firebase App inicializado via arquivo local.")
+            else:
+                print("ERRO: Credenciais do Firebase não encontradas no Streamlit Secrets nem como arquivo local.")
+                # Retorna False para que o app.py possa mostrar a mensagem de erro correta
+                return False
+        
+        firebase_admin.initialize_app(cred)
+    return True
+
 # --- FUNÇÕES DE AUTENTICAÇÃO E DADOS COM FIRESTORE ---
 
 def get_db():
-    """Retorna uma instância do cliente Firestore, assumindo que já foi inicializado."""
+    """Retorna uma instância do cliente Firestore."""
+    # Garante que o app foi inicializado antes de tentar obter o cliente
     if not firebase_admin._apps:
         # Este erro não deve acontecer se app.py chamar a inicialização primeiro.
         st.error("A conexão com o Firebase não foi inicializada corretamente.")
@@ -51,7 +84,7 @@ def send_reset_email(recipient_email: str, token: str):
     try:
         sender_email = st.secrets["email_sender"]
         password = st.secrets["email_password"]
-    except (AttributeError, KeyError, FileNotFoundError):
+    except (FileNotFoundError, KeyError):
         sender_email = EMAIL_SENDER
         password = EMAIL_PASSWORD
 
