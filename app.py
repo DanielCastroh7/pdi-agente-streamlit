@@ -251,6 +251,8 @@ def generate_pdi_pdf(pdi_data):
 # --- FUNÇÃO PRINCIPAL DO APP ---
 def main():
     st.set_page_config(page_title="PDI Agente", layout="wide", initial_sidebar_state="auto")
+
+    firebase_initialized = initialize_firebase()
     
     # --- INICIALIZAÇÃO DO ESTADO DA SESSÃO ---
     if 'logged_in_user' not in st.session_state: st.session_state.logged_in_user = None
@@ -263,6 +265,10 @@ def main():
     if not st.session_state.logged_in_user:
         st.title("Bem-vindo ao PDI Agente 👨‍🚀")
         
+        if not firebase_initialized:
+            st.error("Falha na conexão com o banco de dados. Verifique as credenciais do Firebase.")
+            return
+
         login_tab, register_tab, forgot_tab = st.tabs(["Login", "Registrar", "Esqueci a Senha"])
 
         with login_tab:
