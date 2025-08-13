@@ -29,21 +29,37 @@ def initialize_firebase():
     """
     if not firebase_admin._apps:
         try:
-            creds_json_str = st.secrets["firebase_credentials"]
-            creds_dict = json.loads(creds_json_str)
-            creds_dict['private_key'] = creds_dict['private_key'].replace('\\n', '\n')
+            # **CORREÇÃO DEFINITIVA:** Lendo os segredos como uma tabela TOML
+            creds_dict = {
+                "type": st.secrets["firebase"]["type"],
+                "project_id": st.secrets["firebase"]["project_id"],
+                "private_key_id": st.secrets["firebase"]["private_key_id"],
+                "private_key": st.secrets["firebase"]["private_key"].replace('\\n', '\n'),
+                "client_email": st.secrets["firebase"]["client_email"],
+                "client_id": st.secrets["firebase"]["client_id"],
+                "auth_uri": st.secrets["firebase"]["auth_uri"],
+                "token_uri": st.secrets["firebase"]["token_uri"],
+                "auth_provider_x509_cert_url": st.secrets["firebase"]["auth_provider_x509_cert_url"],
+                "client_x509_cert_url": st.secrets["firebase"]["client_x509_cert_url"]
+            }
             cred = credentials.Certificate(creds_dict)
-            print("Firebase App inicializado via Streamlit Secrets.")
+            print("Firebase App inicializado via Streamlit Secrets (Tabela TOML).")
         except (AttributeError, KeyError, FileNotFoundError):
+            # Fallback for local development
             SERVICE_ACCOUNT_FILE = Path(__file__).parent / "firebase_service_account.json"
             if SERVICE_ACCOUNT_FILE.exists():
                 cred = credentials.Certificate(str(SERVICE_ACCOUNT_FILE))
                 print("Firebase App inicializado via arquivo local.")
             else:
                 print("ERRO: Credenciais do Firebase não encontradas.")
-                # Este erro será visível na tela de login se as credenciais não estiverem configuradas
                 return False
-        firebase_admin.initialize_app(cred)
+        
+        try:
+            firebase_admin.initialize_app(cred)
+        except ValueError as e:
+            st.error(f"Erro ao inicializar o Firebase. Verifique a formatação das credenciais. Detalhe: {e}")
+            return False
+            
     return True
 
 
