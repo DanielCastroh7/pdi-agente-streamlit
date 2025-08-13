@@ -447,7 +447,7 @@ def main():
             
             st.download_button(
                 label="📥 Baixar Diagnóstico em PDF",
-                data=generate_pdi_pdf(pdi_data),
+                #data=generate_pdi_pdf(pdi_data),
                 file_name=f"PDI_Diagnostico_{user_email.split('@')[0]}.pdf",
                 mime="application/pdf"
             )
