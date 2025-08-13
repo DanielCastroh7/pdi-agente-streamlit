@@ -1,7 +1,6 @@
 # auth.py
 import bcrypt
 import json
-from pathlib import Path
 import secrets
 import datetime
 import smtplib
@@ -20,15 +19,31 @@ except ImportError:
     EMAIL_SENDER = None
     EMAIL_PASSWORD = None
 
-# --- FUNÇÕES DE AUTENTICAÇÃO E DADOS COM FIRESTORE ---
+# --- INICIALIZAÇÃO DO FIREBASE ---
+def init_firebase():
+    """
+    Inicializa o Firebase usando credenciais do Streamlit Secrets.
+    Evita múltiplas inicializações.
+    """
+    try:
+        firebase_admin.get_app()
+    except ValueError:
+        try:
+            cred_dict = json.loads(st.secrets["firebase_credentials"])
+            cred = credentials.Certificate(cred_dict)
+            firebase_admin.initialize_app(cred)
+        except KeyError:
+            st.error("As credenciais do Firebase não estão configuradas. A aplicação não pode se conectar ao banco de dados.")
+            return False
+    return True
 
 def get_db():
     """Retorna uma instância do cliente Firestore."""
-    # Garante que o app foi inicializado antes de tentar obter o cliente
-    if not firebase_admin._apps:
-        st.error("A conexão com o Firebase não foi inicializada corretamente.")
+    if not init_firebase():
         return None
     return firestore.client()
+
+# --- FUNÇÕES DE AUTENTICAÇÃO ---
 
 def hash_password(password: str) -> str:
     """Gera um hash seguro para a senha usando bcrypt."""
@@ -106,11 +121,12 @@ def send_reset_email(recipient_email: str, token: str):
 def register_user(email: str, password: str, name: str) -> bool:
     """Registra um novo usuário no Firestore."""
     db = get_db()
-    if db is None: return False
+    if db is None:
+        return False
     user_ref = db.collection('pdi_users').document(email)
     
     if user_ref.get().exists:
-        return False # Usuário já existe
+        return False  # Usuário já existe
 
     hashed_pw = hash_password(password)
     
@@ -137,7 +153,8 @@ def register_user(email: str, password: str, name: str) -> bool:
 def login_user(email: str, password: str) -> bool:
     """Autentica um usuário com base nos dados do Firestore."""
     db = get_db()
-    if db is None: return False
+    if db is None:
+        return False
     user_ref = db.collection('pdi_users').document(email)
     doc = user_ref.get()
 
@@ -154,7 +171,8 @@ def login_user(email: str, password: str) -> bool:
 def set_password_reset_token(email: str) -> bool:
     """Gera um token, armazena no Firestore e envia por e-mail."""
     db = get_db()
-    if db is None: return False
+    if db is None:
+        return False
     user_ref = db.collection('pdi_users').document(email)
     doc = user_ref.get()
 
@@ -174,7 +192,8 @@ def set_password_reset_token(email: str) -> bool:
 def reset_password_with_token(token: str, new_password: str) -> tuple[bool, str]:
     """Redefine a senha de um usuário no Firestore se o token for válido."""
     db = get_db()
-    if db is None: return False, "Conexão com o banco de dados falhou."
+    if db is None:
+        return False, "Conexão com o banco de dados falhou."
     users_ref = db.collection('pdi_users').where('security.reset_token', '==', token).limit(1)
     docs = users_ref.stream()
     
@@ -198,7 +217,8 @@ def reset_password_with_token(token: str, new_password: str) -> tuple[bool, str]
 def load_pdi_data_from_firestore(email: str):
     """Carrega todos os dados de um usuário do Firestore."""
     db = get_db()
-    if db is None: return {"profile": {}, "pdi_plan": {"metas_temporais": {}}}
+    if db is None:
+        return {"profile": {}, "pdi_plan": {"metas_temporais": {}}}
     user_ref = db.collection('pdi_users').document(email)
     doc = user_ref.get()
     if doc.exists:
@@ -208,6 +228,7 @@ def load_pdi_data_from_firestore(email: str):
 def save_pdi_data_to_firestore(email: str, data: dict):
     """Salva/Atualiza os dados de um usuário no Firestore."""
     db = get_db()
-    if db is None: return
+    if db is None:
+        return
     user_ref = db.collection('pdi_users').document(email)
     user_ref.set(data, merge=True)
