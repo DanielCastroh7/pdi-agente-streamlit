@@ -20,23 +20,30 @@ except ImportError:
     EMAIL_SENDER = None
     EMAIL_PASSWORD = None
 
-# --- INICIALIZAÇÃO DO FIREBASE (MÉTODO SIMPLIFICADO E CORRIGIDO) ---
+# --- INICIALIZAÇÃO DO FIREBASE (PARA PRODUÇÃO E DESENVOLVIMENTO) ---
 
 def initialize_firebase():
     """
-    Inicializa o app do Firebase. Em produção (Streamlit Cloud), usa um único st.secret.
+    Inicializa o app do Firebase. Em produção (Streamlit Cloud), usa st.secrets.
     Em desenvolvimento local, usa o arquivo firebase_service_account.json.
     """
     if not firebase_admin._apps:
         try:
             # Tenta usar o Streamlit Secrets (para o ambiente online)
-            creds_json_str = st.secrets["firebase_credentials"]
-            creds_dict = json.loads(creds_json_str)
-            
-            # **CORREÇÃO DEFINITIVA:** Ajusta a formatação da chave privada APÓS carregar o JSON.
-            creds_dict['private_key'] = creds_dict['private_key'].replace('\\n', '\n')
-            
-            cred = credentials.Certificate(creds_dict)
+            creds_json = {
+                "type": st.secrets["firebase"]["type"],
+                "project_id": st.secrets["firebase"]["project_id"],
+                "private_key_id": st.secrets["firebase"]["private_key_id"],
+                # **CORREÇÃO CRÍTICA:** Substitui os caracteres de escape \n por quebras de linha reais.
+                "private_key": st.secrets["firebase"]["private_key"].replace('\\n', '\n'),
+                "client_email": st.secrets["firebase"]["client_email"],
+                "client_id": st.secrets["firebase"]["client_id"],
+                "auth_uri": st.secrets["firebase"]["auth_uri"],
+                "token_uri": st.secrets["firebase"]["token_uri"],
+                "auth_provider_x509_cert_url": st.secrets["firebase"]["auth_provider_x509_cert_url"],
+                "client_x509_cert_url": st.secrets["firebase"]["client_x509_cert_url"]
+            }
+            cred = credentials.Certificate(creds_json)
             print("Firebase App inicializado via Streamlit Secrets.")
         except (AttributeError, KeyError, FileNotFoundError):
             # Se st.secrets falhar, tenta usar o arquivo local (para desenvolvimento)
@@ -51,8 +58,8 @@ def initialize_firebase():
 
         firebase_admin.initialize_app(cred)
 
-# Chama a inicialização
-#initialize_firebase()
+# A inicialização será chamada pelo app.py
+# initialize_firebase() 
 
 # --- FUNÇÕES DE AUTENTICAÇÃO E DADOS COM FIRESTORE ---
 
