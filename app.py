@@ -22,7 +22,6 @@ from pdi_analyzer import run_full_analysis_process
 
 # --- CONFIGURAÇÃO INICIAL E FUNÇÕES AUXILIARES ---
 # **NOVO:** A função de inicialização agora mora aqui.
-# **NOVO:** A função de inicialização agora mora aqui.
 def initialize_firebase():
     """
     Inicializa o app do Firebase. Em produção (Streamlit Cloud), usa st.secrets.
