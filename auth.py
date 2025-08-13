@@ -19,23 +19,37 @@ except ImportError:
     EMAIL_SENDER = None
     EMAIL_PASSWORD = None
 
+
 # --- INICIALIZAÇÃO DO FIREBASE ---
 def init_firebase():
     """
-    Inicializa o Firebase usando credenciais do Streamlit Secrets.
+    Inicializa o Firebase usando credenciais do Streamlit Secrets no formato [firebase].
     Evita múltiplas inicializações.
     """
     try:
         firebase_admin.get_app()
     except ValueError:
         try:
-            cred_dict = json.loads(st.secrets["firebase_credentials"])
-            cred = credentials.Certificate(cred_dict)
+            creds_dict = {
+                "type": st.secrets["firebase"]["type"],
+                "project_id": st.secrets["firebase"]["project_id"],
+                "private_key_id": st.secrets["firebase"]["private_key_id"],
+                "private_key": st.secrets["firebase"]["private_key"].replace('\\n', '\n'),
+                "client_email": st.secrets["firebase"]["client_email"],
+                "client_id": st.secrets["firebase"]["client_id"],
+                "auth_uri": st.secrets["firebase"]["auth_uri"],
+                "token_uri": st.secrets["firebase"]["token_uri"],
+                "auth_provider_x509_cert_url": st.secrets["firebase"]["auth_provider_x509_cert_url"],
+                "client_x509_cert_url": st.secrets["firebase"]["client_x509_cert_url"]
+            }
+            cred = credentials.Certificate(creds_dict)
             firebase_admin.initialize_app(cred)
+            print("Firebase inicializado com sucesso via Streamlit Secrets [firebase].")
         except KeyError:
-            st.error("As credenciais do Firebase não estão configuradas. A aplicação não pode se conectar ao banco de dados.")
+            st.error("As credenciais do Firebase não estão configuradas no formato [firebase] no Streamlit Secrets.")
             return False
     return True
+
 
 def get_db():
     """Retorna uma instância do cliente Firestore."""
@@ -43,17 +57,19 @@ def get_db():
         return None
     return firestore.client()
 
-# --- FUNÇÕES DE AUTENTICAÇÃO ---
 
+# --- FUNÇÕES DE AUTENTICAÇÃO ---
 def hash_password(password: str) -> str:
     """Gera um hash seguro para a senha usando bcrypt."""
     salt = bcrypt.gensalt()
     hashed_password = bcrypt.hashpw(password.encode('utf-8'), salt)
     return hashed_password.decode('utf-8')
 
+
 def check_password(password: str, hashed_password: str) -> bool:
     """Verifica se a senha fornecida corresponde ao hash armazenado."""
     return bcrypt.checkpw(password.encode('utf-8'), hashed_password.encode('utf-8'))
+
 
 def send_reset_email(recipient_email: str, token: str):
     """
@@ -118,6 +134,7 @@ def send_reset_email(recipient_email: str, token: str):
         print(f"Falha ao enviar e-mail: {e}")
         return False
 
+
 def register_user(email: str, password: str, name: str) -> bool:
     """Registra um novo usuário no Firestore."""
     db = get_db()
@@ -150,6 +167,7 @@ def register_user(email: str, password: str, name: str) -> bool:
     user_ref.set(new_user_data)
     return True
 
+
 def login_user(email: str, password: str) -> bool:
     """Autentica um usuário com base nos dados do Firestore."""
     db = get_db()
@@ -167,6 +185,7 @@ def login_user(email: str, password: str) -> bool:
         return False
 
     return check_password(password, hashed_pw)
+
 
 def set_password_reset_token(email: str) -> bool:
     """Gera um token, armazena no Firestore e envia por e-mail."""
@@ -188,6 +207,7 @@ def set_password_reset_token(email: str) -> bool:
     })
     
     return send_reset_email(email, token)
+
 
 def reset_password_with_token(token: str, new_password: str) -> tuple[bool, str]:
     """Redefine a senha de um usuário no Firestore se o token for válido."""
@@ -213,6 +233,7 @@ def reset_password_with_token(token: str, new_password: str) -> tuple[bool, str]
     })
     return True, "Senha redefinida com sucesso! Você já pode fazer o login."
 
+
 # --- FUNÇÕES DE DADOS DO PDI ---
 def load_pdi_data_from_firestore(email: str):
     """Carrega todos os dados de um usuário do Firestore."""
@@ -224,6 +245,7 @@ def load_pdi_data_from_firestore(email: str):
     if doc.exists:
         return doc.to_dict()
     return {"profile": {}, "pdi_plan": {"metas_temporais": {}}}
+
 
 def save_pdi_data_to_firestore(email: str, data: dict):
     """Salva/Atualiza os dados de um usuário no Firestore."""

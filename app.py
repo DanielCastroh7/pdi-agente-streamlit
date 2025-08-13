@@ -22,45 +22,45 @@ from pdi_analyzer import run_full_analysis_process
 
 # --- CONFIGURAÇÃO INICIAL E FUNÇÕES AUXILIARES ---
 # **NOVO:** A função de inicialização agora mora aqui.
-def initialize_firebase():
-    """
-    Inicializa o app do Firebase. Em produção (Streamlit Cloud), usa st.secrets.
-    Em desenvolvimento local, usa o arquivo firebase_service_account.json.
-    """
-    if not firebase_admin._apps:
-        try:
-            # **CORREÇÃO DEFINITIVA:** Lendo os segredos como uma tabela TOML
-            creds_dict = {
-                "type": st.secrets["firebase"]["type"],
-                "project_id": st.secrets["firebase"]["project_id"],
-                "private_key_id": st.secrets["firebase"]["private_key_id"],
-                "private_key": st.secrets["firebase"]["private_key"].replace('\\n', '\n'),
-                "client_email": st.secrets["firebase"]["client_email"],
-                "client_id": st.secrets["firebase"]["client_id"],
-                "auth_uri": st.secrets["firebase"]["auth_uri"],
-                "token_uri": st.secrets["firebase"]["token_uri"],
-                "auth_provider_x509_cert_url": st.secrets["firebase"]["auth_provider_x509_cert_url"],
-                "client_x509_cert_url": st.secrets["firebase"]["client_x509_cert_url"]
-            }
-            cred = credentials.Certificate(creds_dict)
-            print("Firebase App inicializado via Streamlit Secrets (Tabela TOML).")
-        except (AttributeError, KeyError, FileNotFoundError):
-            # Fallback for local development
-            SERVICE_ACCOUNT_FILE = Path(__file__).parent / "firebase_service_account.json"
-            if SERVICE_ACCOUNT_FILE.exists():
-                cred = credentials.Certificate(str(SERVICE_ACCOUNT_FILE))
-                print("Firebase App inicializado via arquivo local.")
-            else:
-                print("ERRO: Credenciais do Firebase não encontradas.")
-                return False
+# def initialize_firebase():
+#     """
+#     Inicializa o app do Firebase. Em produção (Streamlit Cloud), usa st.secrets.
+#     Em desenvolvimento local, usa o arquivo firebase_service_account.json.
+#     """
+#     if not firebase_admin._apps:
+#         try:
+#             # **CORREÇÃO DEFINITIVA:** Lendo os segredos como uma tabela TOML
+#             creds_dict = {
+#                 "type": st.secrets["firebase"]["type"],
+#                 "project_id": st.secrets["firebase"]["project_id"],
+#                 "private_key_id": st.secrets["firebase"]["private_key_id"],
+#                 "private_key": st.secrets["firebase"]["private_key"].replace('\\n', '\n'),
+#                 "client_email": st.secrets["firebase"]["client_email"],
+#                 "client_id": st.secrets["firebase"]["client_id"],
+#                 "auth_uri": st.secrets["firebase"]["auth_uri"],
+#                 "token_uri": st.secrets["firebase"]["token_uri"],
+#                 "auth_provider_x509_cert_url": st.secrets["firebase"]["auth_provider_x509_cert_url"],
+#                 "client_x509_cert_url": st.secrets["firebase"]["client_x509_cert_url"]
+#             }
+#             cred = credentials.Certificate(creds_dict)
+#             print("Firebase App inicializado via Streamlit Secrets (Tabela TOML).")
+#         except (AttributeError, KeyError, FileNotFoundError):
+#             # Fallback for local development
+#             SERVICE_ACCOUNT_FILE = Path(__file__).parent / "firebase_service_account.json"
+#             if SERVICE_ACCOUNT_FILE.exists():
+#                 cred = credentials.Certificate(str(SERVICE_ACCOUNT_FILE))
+#                 print("Firebase App inicializado via arquivo local.")
+#             else:
+#                 print("ERRO: Credenciais do Firebase não encontradas.")
+#                 return False
         
-        try:
-            firebase_admin.initialize_app(cred)
-        except ValueError as e:
-            st.error(f"Erro ao inicializar o Firebase. Verifique a formatação das credenciais. Detalhe: {e}")
-            return False
+#         try:
+#             firebase_admin.initialize_app(cred)
+#         except ValueError as e:
+#             st.error(f"Erro ao inicializar o Firebase. Verifique a formatação das credenciais. Detalhe: {e}")
+#             return False
             
-    return True
+#     return True
 
 
 DATA_PATH = Path("data_pdi")
@@ -268,7 +268,7 @@ def generate_pdi_pdf(pdi_data):
 def main():
     st.set_page_config(page_title="PDI Agente", layout="wide", initial_sidebar_state="auto")
 
-    firebase_initialized = initialize_firebase()
+    #firebase_initialized = initialize_firebase()
     
     # --- INICIALIZAÇÃO DO ESTADO DA SESSÃO ---
     if 'logged_in_user' not in st.session_state: st.session_state.logged_in_user = None
@@ -281,9 +281,9 @@ def main():
     if not st.session_state.logged_in_user:
         st.title("Bem-vindo ao PDI Agente 👨‍🚀")
         
-        if not firebase_initialized:
-            st.error("Falha na conexão com o banco de dados. Verifique as credenciais do Firebase no Streamlit Cloud Secrets.")
-            return
+        #if not firebase_initialized:
+        #    st.error("Falha na conexão com o banco de dados. Verifique as credenciais do Firebase no Streamlit Cloud Secrets.")
+        #    return
         
         login_tab, register_tab, forgot_tab = st.tabs(["Login", "Registrar", "Esqueci a Senha"])
 
