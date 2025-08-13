@@ -30,9 +30,12 @@ def initialize_firebase():
     if not firebase_admin._apps:
         try:
             # Tenta usar o Streamlit Secrets (para o ambiente online)
-            # **CORREÇÃO:** Carrega o JSON inteiro de um único segredo
             creds_json_str = st.secrets["firebase_credentials"]
             creds_dict = json.loads(creds_json_str)
+            
+            # **CORREÇÃO DEFINITIVA:** Ajusta a formatação da chave privada APÓS carregar o JSON.
+            creds_dict['private_key'] = creds_dict['private_key'].replace('\\n', '\n')
+            
             cred = credentials.Certificate(creds_dict)
             print("Firebase App inicializado via Streamlit Secrets.")
         except (AttributeError, KeyError, FileNotFoundError):
