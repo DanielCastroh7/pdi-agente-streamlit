@@ -6,6 +6,8 @@ import time
 import multiprocessing
 import queue
 from fpdf import FPDF
+import firebase_admin
+from firebase_admin import credentials
 
 # Importa as funções de autenticação e análise
 from auth import (
@@ -20,7 +22,32 @@ from auth import (
 from pdi_analyzer import run_full_analysis_process
 
 # --- CONFIGURAÇÃO INICIAL E FUNÇÕES AUXILIARES ---
-initialize_firebase()
+# **NOVO:** A função de inicialização agora mora aqui.
+def initialize_firebase():
+    """
+    Inicializa o app do Firebase. Em produção (Streamlit Cloud), usa st.secrets.
+    Em desenvolvimento local, usa o arquivo firebase_service_account.json.
+    """
+    if not firebase_admin._apps:
+        try:
+            creds_json_str = st.secrets["firebase_credentials"]
+            creds_dict = json.loads(creds_json_str)
+            creds_dict['private_key'] = creds_dict['private_key'].replace('\\n', '\n')
+            cred = credentials.Certificate(creds_dict)
+            print("Firebase App inicializado via Streamlit Secrets.")
+        except (AttributeError, KeyError, FileNotFoundError):
+            SERVICE_ACCOUNT_FILE = Path(__file__).parent / "firebase_service_account.json"
+            if SERVICE_ACCOUNT_FILE.exists():
+                cred = credentials.Certificate(str(SERVICE_ACCOUNT_FILE))
+                print("Firebase App inicializado via arquivo local.")
+            else:
+                print("ERRO: Credenciais do Firebase não encontradas.")
+                # Este erro será visível na tela de login se as credenciais não estiverem configuradas
+                return False
+        firebase_admin.initialize_app(cred)
+    return True
+
+
 DATA_PATH = Path("data_pdi")
 DATA_PATH.mkdir(parents=True, exist_ok=True)
 
