@@ -14,11 +14,13 @@ from auth import (
     set_password_reset_token, 
     reset_password_with_token,
     load_pdi_data_from_firestore,
-    save_pdi_data_to_firestore
+    save_pdi_data_to_firestore,
+    initialize_firebase
 )
 from pdi_analyzer import run_full_analysis_process
 
 # --- CONFIGURAÇÃO INICIAL E FUNÇÕES AUXILIARES ---
+initialize_firebase()
 DATA_PATH = Path("data_pdi")
 DATA_PATH.mkdir(parents=True, exist_ok=True)
 

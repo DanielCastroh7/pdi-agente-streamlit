@@ -52,7 +52,7 @@ def initialize_firebase():
         firebase_admin.initialize_app(cred)
 
 # Chama a inicialização
-initialize_firebase()
+#initialize_firebase()
 
 # --- FUNÇÕES DE AUTENTICAÇÃO E DADOS COM FIRESTORE ---
 
