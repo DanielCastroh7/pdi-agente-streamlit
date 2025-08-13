@@ -1,0 +1,7 @@
+streamlit
+playwright
+google-generativeai
+nest-asyncio
+fpdf2
+bcrypt
+firebase-admin

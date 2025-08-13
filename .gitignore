@@ -1,0 +1,20 @@
+# Ignorar o arquivo de chave secreta do Firebase
+firebase_service_account.json
+
+# Ignorar o arquivo de configuração local
+config.py
+
+# Ignorar a pasta de dados local (não é mais usada, mas é uma boa prática)
+data_pdi/
+
+# Ignorar o arquivo de log
+automation_log.log
+
+# Ignorar arquivos de ambiente virtual do Python
+.venv/
+venv/
+__pycache__/
+
+# Ignorar arquivos do sistema operacional
+.DS_Store
+Thumbs.db
