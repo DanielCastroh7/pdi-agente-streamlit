@@ -64,7 +64,11 @@ def initialize_firebase():
 # --- FUNÇÕES DE AUTENTICAÇÃO E DADOS COM FIRESTORE ---
 
 def get_db():
-    """Retorna uma instância do cliente Firestore."""
+    if not firebase_admin._apps:  # Evita reinicialização
+        firebase_creds_str = st.secrets["firebase_credentials"]
+        firebase_creds_dict = json.loads(firebase_creds_str)
+        cred = credentials.Certificate(firebase_creds_dict)
+        firebase_admin.initialize_app(cred)
     return firestore.client()
 
 def hash_password(password: str) -> str:
