@@ -284,7 +284,7 @@ def main():
         if not firebase_initialized:
             st.error("Falha na conexão com o banco de dados. Verifique as credenciais do Firebase no Streamlit Cloud Secrets.")
             return
-
+        
         login_tab, register_tab, forgot_tab = st.tabs(["Login", "Registrar", "Esqueci a Senha"])
 
         with login_tab:
