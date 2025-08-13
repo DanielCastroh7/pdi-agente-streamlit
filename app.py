@@ -74,179 +74,179 @@ def load_pdi_data(user_id):
     """Carrega os dados do PDI de um arquivo JSON, se ele existir."""
     return load_pdi_data_from_firestore(user_id)
 
-# --- FUNÇÃO GERADORA DE PDF (CORRIGIDA E APRIMORADA) ---
-def generate_pdi_pdf(pdi_data):
-    """Cria um PDF formatado com o diagnóstico completo do PDI."""
-    analysis = pdi_data.get("ai_analysis", {})
-    profile = pdi_data.get("profile", {})
+# # --- FUNÇÃO GERADORA DE PDF (CORRIGIDA E APRIMORADA) ---
+# def generate_pdi_pdf(pdi_data):
+#     """Cria um PDF formatado com o diagnóstico completo do PDI."""
+#     analysis = pdi_data.get("ai_analysis", {})
+#     profile = pdi_data.get("profile", {})
 
-    pdf = FPDF()
-    pdf.add_page()
-    pdf.set_auto_page_break(auto=True, margin=15)
-    pdf.set_font("Helvetica", "B", 16)
+#     pdf = FPDF()
+#     pdf.add_page()
+#     pdf.set_auto_page_break(auto=True, margin=15)
+#     pdf.set_font("Helvetica", "B", 16)
 
-    def clean_text(text):
-        if not isinstance(text, str):
-            text = str(text)
-        return text.encode('latin-1', 'replace').decode('latin-1')
+#     def clean_text(text):
+#         if not isinstance(text, str):
+#             text = str(text)
+#         return text.encode('latin-1', 'replace').decode('latin-1')
 
-    pdf.cell(0, 10, clean_text(f"PDI Agente: Diagnostico de Carreira para {profile.get('nome', 'Usuario')}"), 0, 1, "C")
-    pdf.ln(10)
+#     pdf.cell(0, 10, clean_text(f"PDI Agente: Diagnostico de Carreira para {profile.get('nome', 'Usuario')}"), 0, 1, "C")
+#     pdf.ln(10)
 
-    def write_section(title, content):
-        if not content: return
-        pdf.set_font("Helvetica", "B", 12)
-        pdf.cell(0, 10, clean_text(title), 0, 1, "L")
-        pdf.set_font("Helvetica", "", 10)
-        pdf.multi_cell(0, 5, clean_text(content))
-        pdf.ln(5)
+#     def write_section(title, content):
+#         if not content: return
+#         pdf.set_font("Helvetica", "B", 12)
+#         pdf.cell(0, 10, clean_text(title), 0, 1, "L")
+#         pdf.set_font("Helvetica", "", 10)
+#         pdf.multi_cell(0, 5, clean_text(content))
+#         pdf.ln(5)
 
-    write_section("Analise Geral da IA", analysis.get("analise_geral", "N/A"))
+#     write_section("Analise Geral da IA", analysis.get("analise_geral", "N/A"))
 
-    empresa_ideal = analysis.get("tipo_empresa_ideal", {})
-    if isinstance(empresa_ideal, dict):
-        empresa_ideal_text = ""
-        for key, value in empresa_ideal.items():
-            empresa_ideal_text += f"{key.capitalize()}: {value}\n"
-        write_section("Perfil de Empresa Ideal", empresa_ideal_text)
-    else:
-        write_section("Perfil de Empresa Ideal", empresa_ideal)
+#     empresa_ideal = analysis.get("tipo_empresa_ideal", {})
+#     if isinstance(empresa_ideal, dict):
+#         empresa_ideal_text = ""
+#         for key, value in empresa_ideal.items():
+#             empresa_ideal_text += f"{key.capitalize()}: {value}\n"
+#         write_section("Perfil de Empresa Ideal", empresa_ideal_text)
+#     else:
+#         write_section("Perfil de Empresa Ideal", empresa_ideal)
 
-    pdf.set_font("Helvetica", "B", 12)
-    pdf.cell(0, 10, clean_text("Plano SMART (Proximo Ano)"), 0, 1, "L")
-    smart_plan = analysis.get("plano_smart_1_ano", {})
+#     pdf.set_font("Helvetica", "B", 12)
+#     pdf.cell(0, 10, clean_text("Plano SMART (Proximo Ano)"), 0, 1, "L")
+#     smart_plan = analysis.get("plano_smart_1_ano", {})
 
-    if isinstance(smart_plan, dict):
-        for key in ['S', 'M', 'A', 'R', 'T']:
-            value = smart_plan.get(key)
-            if not value:
-                continue
+#     if isinstance(smart_plan, dict):
+#         for key in ['S', 'M', 'A', 'R', 'T']:
+#             value = smart_plan.get(key)
+#             if not value:
+#                 continue
 
-            pdf.set_font("Helvetica", "B", 10)
-            pdf.multi_cell(0, 5, clean_text(f"  - {key.upper()}:"))
-            pdf.set_font("Helvetica", "", 10)
+#             pdf.set_font("Helvetica", "B", 10)
+#             pdf.multi_cell(0, 5, clean_text(f"  - {key.upper()}:"))
+#             pdf.set_font("Helvetica", "", 10)
 
-            # Tratamento especial para "M" (lista de objetivos mensuráveis: detalhe + metrica)
-            if key == "M":
-                if isinstance(value, list):
-                    for idx, item in enumerate(value, start=1):
-                        # item esperado: {"detalhe": "...", "metrica": "..."}
-                        if isinstance(item, dict):
-                            detalhe = item.get("detalhe", "")
-                            metrica = item.get("metrica", "")
-                            detalhe_text = detalhe if detalhe else json.dumps(item, ensure_ascii=False)
-                            if metrica:
-                                pdf.multi_cell(0, 5, clean_text(f"    {idx}. {detalhe_text}\n       (Métrica: {metrica})"))
-                            else:
-                                pdf.multi_cell(0, 5, clean_text(f"    {idx}. {detalhe_text}"))
-                        else:
-                            pdf.multi_cell(0, 5, clean_text(f"    {idx}. {item}"))
-                    continue
-                # se "M" veio como dict (ou string) cairá no fluxo abaixo
+#             # Tratamento especial para "M" (lista de objetivos mensuráveis: detalhe + metrica)
+#             if key == "M":
+#                 if isinstance(value, list):
+#                     for idx, item in enumerate(value, start=1):
+#                         # item esperado: {"detalhe": "...", "metrica": "..."}
+#                         if isinstance(item, dict):
+#                             detalhe = item.get("detalhe", "")
+#                             metrica = item.get("metrica", "")
+#                             detalhe_text = detalhe if detalhe else json.dumps(item, ensure_ascii=False)
+#                             if metrica:
+#                                 pdf.multi_cell(0, 5, clean_text(f"    {idx}. {detalhe_text}\n       (Métrica: {metrica})"))
+#                             else:
+#                                 pdf.multi_cell(0, 5, clean_text(f"    {idx}. {detalhe_text}"))
+#                         else:
+#                             pdf.multi_cell(0, 5, clean_text(f"    {idx}. {item}"))
+#                     continue
+#                 # se "M" veio como dict (ou string) cairá no fluxo abaixo
 
-            # Tratamento especial para "T" (Data limite + Cronograma por trimestre com foco e ações)
-            if key == "T":
-                # Pode ser dict, list ou string. Tentamos várias heurísticas.
-                if isinstance(value, dict):
-                    # procura por variações de "data limite"
-                    data_limite = value.get("Data limite") or value.get("Data_limite") or value.get("data limite") or value.get("data_limite") or value.get("data")
-                    if data_limite:
-                        pdf.multi_cell(0, 5, clean_text(f"    Data limite: {data_limite}"))
-                    # procura por cronograma
-                    cronograma = value.get("Cronograma") or value.get("cronograma") or value.get("Cronogramas") or value.get("Trimestres")
-                    # às vezes o cronograma pode estar direto como dict de trimestres
-                    if isinstance(cronograma, list):
-                        for trimestre in cronograma:
-                            if isinstance(trimestre, dict):
-                                tr_nome = trimestre.get("Trimestre") or trimestre.get("trimestre") or trimestre.get("periodo") or ""
-                                foco = trimestre.get("Foco") or trimestre.get("foco") or ""
-                                if tr_nome or foco:
-                                    trim_info = f"{tr_nome}".strip()
-                                    if foco:
-                                        trim_info += f" - Foco: {foco}"
-                                    pdf.multi_cell(0, 5, clean_text(f"    {trim_info}"))
-                                # acoes pode ser lista de strings
-                                acoes = trimestre.get("Acoes") or trimestre.get("acoes") or trimestre.get("Ação") or trimestre.get("acoes_list")
-                                if isinstance(acoes, list):
-                                    for acao in acoes:
-                                        pdf.multi_cell(0, 5, clean_text(f"       - {acao}"))
-                                else:
-                                    # se ações for string
-                                    if acoes:
-                                        pdf.multi_cell(0, 5, clean_text(f"       - {acoes}"))
-                            else:
-                                # trimestre é string
-                                pdf.multi_cell(0, 5, clean_text(f"    - {trimestre}"))
-                    elif isinstance(cronograma, dict):
-                        # dicionário com chaves sendo trimestres
-                        for tr_key, tr_val in cronograma.items():
-                            foco = ""
-                            acoes = []
-                            if isinstance(tr_val, dict):
-                                foco = tr_val.get("Foco") or tr_val.get("foco") or ""
-                                acoes = tr_val.get("Acoes") or tr_val.get("acoes") or []
-                            else:
-                                # tr_val pode já ser lista de ações
-                                if isinstance(tr_val, list):
-                                    acoes = tr_val
-                                else:
-                                    acoes = [tr_val]
-                            trim_info = f"{tr_key}"
-                            if foco:
-                                trim_info += f" - Foco: {foco}"
-                            pdf.multi_cell(0, 5, clean_text(f"    {trim_info}"))
-                            for acao in acoes:
-                                pdf.multi_cell(0, 5, clean_text(f"       - {acao}"))
-                    else:
-                        # se não encontrou cronograma estruturado, tenta detectar se há campos tipo "Trimestre: ..." dentro do próprio dict
-                        found = False
-                        for sub_k, sub_v in value.items():
-                            if "Trimestre" in str(sub_k) or "trimestre" in str(sub_k) or "Trimestre" in str(sub_v):
-                                found = True
-                                pdf.multi_cell(0, 5, clean_text(f"    {sub_k}: {sub_v}"))
-                        if not found:
-                            # fallback: imprime o dict inteiro (formatado)
-                            pdf.multi_cell(0, 5, clean_text(f"    {json.dumps(value, ensure_ascii=False)}"))
-                    continue
-                elif isinstance(value, list):
-                    # lista de trimestres ou ações
-                    for item in value:
-                        if isinstance(item, dict):
-                            tr_nome = item.get("Trimestre") or item.get("trimestre") or ""
-                            foco = item.get("Foco") or item.get("foco") or ""
-                            if tr_nome or foco:
-                                trim_info = f"{tr_nome}"
-                                if foco:
-                                    trim_info += f" - Foco: {foco}"
-                                pdf.multi_cell(0, 5, clean_text(f"    {trim_info}"))
-                            acoes = item.get("Acoes") or item.get("acoes") or []
-                            for acao in acoes:
-                                pdf.multi_cell(0, 5, clean_text(f"       - {acao}"))
-                        else:
-                            pdf.multi_cell(0, 5, clean_text(f"    - {item}"))
-                    continue
-                else:
-                    # string mais livre: só imprime
-                    pdf.multi_cell(0, 5, clean_text(str(value)))
-                    continue
+#             # Tratamento especial para "T" (Data limite + Cronograma por trimestre com foco e ações)
+#             if key == "T":
+#                 # Pode ser dict, list ou string. Tentamos várias heurísticas.
+#                 if isinstance(value, dict):
+#                     # procura por variações de "data limite"
+#                     data_limite = value.get("Data limite") or value.get("Data_limite") or value.get("data limite") or value.get("data_limite") or value.get("data")
+#                     if data_limite:
+#                         pdf.multi_cell(0, 5, clean_text(f"    Data limite: {data_limite}"))
+#                     # procura por cronograma
+#                     cronograma = value.get("Cronograma") or value.get("cronograma") or value.get("Cronogramas") or value.get("Trimestres")
+#                     # às vezes o cronograma pode estar direto como dict de trimestres
+#                     if isinstance(cronograma, list):
+#                         for trimestre in cronograma:
+#                             if isinstance(trimestre, dict):
+#                                 tr_nome = trimestre.get("Trimestre") or trimestre.get("trimestre") or trimestre.get("periodo") or ""
+#                                 foco = trimestre.get("Foco") or trimestre.get("foco") or ""
+#                                 if tr_nome or foco:
+#                                     trim_info = f"{tr_nome}".strip()
+#                                     if foco:
+#                                         trim_info += f" - Foco: {foco}"
+#                                     pdf.multi_cell(0, 5, clean_text(f"    {trim_info}"))
+#                                 # acoes pode ser lista de strings
+#                                 acoes = trimestre.get("Acoes") or trimestre.get("acoes") or trimestre.get("Ação") or trimestre.get("acoes_list")
+#                                 if isinstance(acoes, list):
+#                                     for acao in acoes:
+#                                         pdf.multi_cell(0, 5, clean_text(f"       - {acao}"))
+#                                 else:
+#                                     # se ações for string
+#                                     if acoes:
+#                                         pdf.multi_cell(0, 5, clean_text(f"       - {acoes}"))
+#                             else:
+#                                 # trimestre é string
+#                                 pdf.multi_cell(0, 5, clean_text(f"    - {trimestre}"))
+#                     elif isinstance(cronograma, dict):
+#                         # dicionário com chaves sendo trimestres
+#                         for tr_key, tr_val in cronograma.items():
+#                             foco = ""
+#                             acoes = []
+#                             if isinstance(tr_val, dict):
+#                                 foco = tr_val.get("Foco") or tr_val.get("foco") or ""
+#                                 acoes = tr_val.get("Acoes") or tr_val.get("acoes") or []
+#                             else:
+#                                 # tr_val pode já ser lista de ações
+#                                 if isinstance(tr_val, list):
+#                                     acoes = tr_val
+#                                 else:
+#                                     acoes = [tr_val]
+#                             trim_info = f"{tr_key}"
+#                             if foco:
+#                                 trim_info += f" - Foco: {foco}"
+#                             pdf.multi_cell(0, 5, clean_text(f"    {trim_info}"))
+#                             for acao in acoes:
+#                                 pdf.multi_cell(0, 5, clean_text(f"       - {acao}"))
+#                     else:
+#                         # se não encontrou cronograma estruturado, tenta detectar se há campos tipo "Trimestre: ..." dentro do próprio dict
+#                         found = False
+#                         for sub_k, sub_v in value.items():
+#                             if "Trimestre" in str(sub_k) or "trimestre" in str(sub_k) or "Trimestre" in str(sub_v):
+#                                 found = True
+#                                 pdf.multi_cell(0, 5, clean_text(f"    {sub_k}: {sub_v}"))
+#                         if not found:
+#                             # fallback: imprime o dict inteiro (formatado)
+#                             pdf.multi_cell(0, 5, clean_text(f"    {json.dumps(value, ensure_ascii=False)}"))
+#                     continue
+#                 elif isinstance(value, list):
+#                     # lista de trimestres ou ações
+#                     for item in value:
+#                         if isinstance(item, dict):
+#                             tr_nome = item.get("Trimestre") or item.get("trimestre") or ""
+#                             foco = item.get("Foco") or item.get("foco") or ""
+#                             if tr_nome or foco:
+#                                 trim_info = f"{tr_nome}"
+#                                 if foco:
+#                                     trim_info += f" - Foco: {foco}"
+#                                 pdf.multi_cell(0, 5, clean_text(f"    {trim_info}"))
+#                             acoes = item.get("Acoes") or item.get("acoes") or []
+#                             for acao in acoes:
+#                                 pdf.multi_cell(0, 5, clean_text(f"       - {acao}"))
+#                         else:
+#                             pdf.multi_cell(0, 5, clean_text(f"    - {item}"))
+#                     continue
+#                 else:
+#                     # string mais livre: só imprime
+#                     pdf.multi_cell(0, 5, clean_text(str(value)))
+#                     continue
 
-            # Tratamento padrão (S, A, R e outros formatos)
-            if isinstance(value, dict):
-                for sub_key, sub_value in value.items():
-                    sub_value_text = ""
-                    if isinstance(sub_value, list):
-                        for item in sub_value:
-                            if isinstance(item, dict):
-                                for k, v in item.items():
-                                    sub_value_text += f"      - {k.capitalize()}: {v}\n"
-                            else:
-                                sub_value_text += f"      - {item}\n"
-                    else:
-                        sub_value_text = str(sub_value)
-                    pdf.multi_cell(0, 5, clean_text(f"    * {sub_key.replace('_', ' ').capitalize()}: \n{sub_value_text}"))
-            else:
-                pdf.multi_cell(0, 5, clean_text(str(value)))
-    pdf.ln(5)
+#             # Tratamento padrão (S, A, R e outros formatos)
+#             if isinstance(value, dict):
+#                 for sub_key, sub_value in value.items():
+#                     sub_value_text = ""
+#                     if isinstance(sub_value, list):
+#                         for item in sub_value:
+#                             if isinstance(item, dict):
+#                                 for k, v in item.items():
+#                                     sub_value_text += f"      - {k.capitalize()}: {v}\n"
+#                             else:
+#                                 sub_value_text += f"      - {item}\n"
+#                     else:
+#                         sub_value_text = str(sub_value)
+#                     pdf.multi_cell(0, 5, clean_text(f"    * {sub_key.replace('_', ' ').capitalize()}: \n{sub_value_text}"))
+#             else:
+#                 pdf.multi_cell(0, 5, clean_text(str(value)))
+#     pdf.ln(5)
 
     recomendacoes = analysis.get("recomendacoes_focadas", [])
     if isinstance(recomendacoes, list) and recomendacoes:
