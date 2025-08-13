@@ -16,8 +16,7 @@ from auth import (
     set_password_reset_token, 
     reset_password_with_token,
     load_pdi_data_from_firestore,
-    save_pdi_data_to_firestore,
-    initialize_firebase
+    save_pdi_data_to_firestore
 )
 from pdi_analyzer import run_full_analysis_process
 
