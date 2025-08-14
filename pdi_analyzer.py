@@ -119,21 +119,21 @@ def run_full_analysis_process(q_to_ui, user_email):
     """
     try:
         # --- INÍCIO DA MODIFICAÇÃO ---
-        # Adicionamos este bloco para instalar o Playwright e suas dependências no ambiente da nuvem.
-        q_to_ui.put({"status": "info", "message": "Inicializando análise... Verificando dependências do navegador..."})
+        # REMOVEMOS a flag "--with-deps" para que o comando não peça permissão de administrador.
+        # O arquivo packages.txt já cuidou das dependências do sistema.
+        q_to_ui.put({"status": "info", "message": "Inicializando análise... Verificando navegador..."})
         try:
-            # O comando "--with-deps" ajuda a instalar bibliotecas do sistema necessárias
-            # O timeout evita que o processo fique preso indefinidamente.
-            subprocess.run(["playwright", "install", "--with-deps"], check=True, timeout=180)
-            q_to_ui.put({"status": "info", "message": "Dependências prontas."})
+            # O comando agora apenas baixa o binário do navegador.
+            subprocess.run(["playwright", "install"], check=True, timeout=180)
+            q_to_ui.put({"status": "info", "message": "Navegador pronto."})
         except (subprocess.CalledProcessError, subprocess.TimeoutExpired, FileNotFoundError) as e:
-            # Se o comando falhar, envia uma mensagem de erro clara e interrompe o processo.
-            error_message = f"Falha crítica ao instalar dependências do navegador com Playwright: {e}. Isso pode ocorrer em ambientes sem permissão. Tente reiniciar o app."
-            print(error_message) # Log no terminal
+            error_message = f"Falha crítica ao instalar navegador com Playwright: {e}."
+            print(error_message)
             q_to_ui.put({"status": "error", "message": error_message})
-            return # Interrompe a execução
+            return
         # --- FIM DA MODIFICAÇÃO ---
 
+        # O resto da sua função continua exatamente igual...
         q_to_ui.put({"status": "info", "message": "Passo 1/8: Lendo seu perfil no LinkedIn..."})
         pdi_data = load_pdi_data_from_firestore(user_email)
         
@@ -172,6 +172,7 @@ def run_full_analysis_process(q_to_ui, user_email):
         q_to_ui.put({"status": "complete", "data": pdi_data})
 
     except Exception as e:
+        import traceback
         tb_str = traceback.format_exc()
         print(f"ERRO NO PROCESSO: {e}\n{tb_str}")
         q_to_ui.put({"status": "error", "message": f"Ocorreu um erro no processo: {e}"})

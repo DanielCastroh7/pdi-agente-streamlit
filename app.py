@@ -93,7 +93,8 @@ def generate_pdi_pdf(pdi_data):
         raise FileNotFoundError(
             f"Fonte não encontrada em {font_path}. Baixe DejaVuSans.ttf e coloque em /fonts"
         )
-    pdf.add_font("DejaVu", "", font_path, uni=True)
+    #pdf.add_font("DejaVu", "", font_path, uni=True)
+    pdf.add_font("DejaVu", "", font_path)
     pdf.set_font("DejaVu", "", 16)
 
     # --- Helpers ---
