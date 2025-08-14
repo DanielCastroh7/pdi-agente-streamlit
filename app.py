@@ -434,12 +434,40 @@ def main():
         with st.form("profile_form"):
             nome = st.text_input("Nome Completo", value=pdi_data["profile"].get("nome", ""))
             linkedin_url = st.text_input("URL do seu Perfil no LinkedIn", value=pdi_data["profile"].get("linkedin_url", ""))
+            cargo_atual = st.text_input(
+                "Descreva seu cargo atual", 
+                value=pdi_data["profile"].get("cargo_atual", ""),
+                placeholder="Se estiver desempregado, digite 'Desempregado atualmente'"
+            )
+
+            niveis_hierarquicos = [
+                "Assistente/Auxiliar", 
+                "Junior (I)", 
+                "Pleno (II)", 
+                "Sênior (III)", 
+                "Especialista", 
+                "Liderança", 
+                "C-Level"
+            ]
+            # Lógica para encontrar o índice do valor salvo ou usar 0 como padrão
+            try:
+                saved_index = niveis_hierarquicos.index(pdi_data["profile"].get("nivel_hierarquico", "Junior (I)"))
+            except ValueError:
+                saved_index = 1 # Padrão para 'Junior (I)' se o valor salvo não estiver na lista
+
+            nivel_hierarquico = st.selectbox(
+                "Nível hierárquico", 
+                options=niveis_hierarquicos,
+                index=saved_index
+            )
             habilidades_input = st.text_input("Suas Principais Habilidades (separadas por vírgula)", value=", ".join(pdi_data["profile"].get("habilidades_atuais", [])))
             melhorar_input = st.text_input("Seus pontos a melhorar (separadas por vírgula)", value=", ".join(pdi_data["profile"].get("pontos_a_melhorar", [])))
             resumo_profissional = st.text_area("Resumo Profissional", height=150, value=pdi_data["profile"].get("resumo_profissional", ""))
             if st.form_submit_button("Salvar Perfil"):
                 pdi_data["profile"]["nome"] = nome
                 pdi_data["profile"]["linkedin_url"] = linkedin_url
+                pdi_data["profile"]["cargo_atual"] = cargo_atual
+                pdi_data["profile"]["nivel_hierarquico"] = nivel_hierarquico
                 pdi_data["profile"]["habilidades_atuais"] = [h.strip() for h in habilidades_input.split(',') if h.strip()]
                 pdi_data["profile"]["pontos_a_melhorar"] = [p.strip() for p in melhorar_input.split(',') if p.strip()]
                 pdi_data["profile"]["resumo_profissional"] = resumo_profissional

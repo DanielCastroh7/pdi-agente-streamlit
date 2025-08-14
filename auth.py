@@ -152,6 +152,8 @@ def register_user(email: str, password: str, name: str) -> bool:
         "profile": {
             "nome": name,
             "email": email,
+            "cargo_atual": "", # NOVO CAMPO
+            "nivel_hierarquico": "Junior (I)", # NOVO CAMPO com valor padrão
             "habilidades_atuais": [],
             "pontos_a_melhorar": [],
             "resumo_profissional": ""
