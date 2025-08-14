@@ -2,54 +2,66 @@
 import time
 from playwright.sync_api import sync_playwright, TimeoutError
 
+
 def scrape_linkedin_profile(url: str) -> str:
     """
-    Acessa uma URL do LinkedIn de forma mais robusta, esperando o conteúdo carregar
-    e simulando um navegador real para extrair o texto visível.
+    Scraper robusto que tenta detectar páginas de login/captcha e fornece
+    debugging detalhado em caso de falha.
     """
-    full_text = ""
-    browser = None # Inicializa a variável do browser
+    browser = None
     try:
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
-            
-            # 1. Simular um navegador de verdade com um User-Agent comum
             context = browser.new_context(
                 user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36"
             )
             page = context.new_page()
 
-            # 2. Navegar para a URL de forma paciente
-            #    wait_until="networkidle" espera a página e seus scripts terminarem de carregar
-            print("Acessando a URL do LinkedIn e aguardando o carregamento completo...")
-            page.goto(url, wait_until="networkidle", timeout=60000) # Timeout de 60s
+            print("Acessando a URL e aguardando a rede...")
+            page.goto(url, wait_until="networkidle", timeout=60000)
 
-            # 3. Esperar por um elemento chave do perfil aparecer na tela
-            #    Em vez de pegar o 'body' inteiro, esperamos pelo container principal do perfil
-            print("Página carregada. Aguardando o conteúdo principal do perfil...")
-            main_content_selector = "main" # O elemento <main> geralmente contém o perfil
+            # --- VERIFICAÇÃO DE SEGURANÇA ---
+            # Verifica se o LinkedIn nos redirecionou para uma página de login/segurança
+            page_title = page.title()
+            print(f"Título da página carregada: '{page_title}'")
+            if "Sign In" in page_title or "Entrar" in page_title or "Security" in page_title:
+                raise Exception(f"Página de login ou verificação de segurança detectada. Título: '{page_title}'. O scraping não pode continuar sem autenticação.")
+
+            # Espera pelo conteúdo principal do perfil
+            main_content_selector = "main"
+            print("Aguardando pelo seletor principal do perfil...")
             page.wait_for_selector(main_content_selector, state="visible", timeout=30000)
-
-            # 4. Pausa extra para garantir que todos os scripts finais rodem
+            
             time.sleep(1.5)
 
-            # 5. Agora sim, extrair o texto do conteúdo principal
-            print("Extraindo texto do perfil...")
+            print("Extraindo texto...")
             full_text = page.locator(main_content_selector).first.inner_text()
+
+            if not full_text.strip():
+                 raise Exception("Conteúdo do perfil extraído está vazio. A página pode ter carregado incorretamente.")
 
             print("Scraping concluído com sucesso.")
             return full_text
 
+    except TimeoutError:
+        # Erro específico se o tempo de espera de 30s for atingido
+        print("ERRO DE TIMEOUT: O elemento esperado (perfil principal) não apareceu a tempo.")
+        page.screenshot(path="debug_timeout.png")
+        page.content().encode('utf-8')
+        with open("debug_timeout.html", "w", encoding='utf-8') as f:
+            f.write(page.content())
+        raise Exception("Tempo de espera esgotado. O LinkedIn provavelmente apresentou uma página inesperada (login/CAPTCHA). Verifique os arquivos de debug.")
+
     except Exception as e:
-        print(f"ERRO DURANTE O SCRAPING: {e}")
-        # Se um erro ocorrer, é útil saber qual texto foi extraído (se houver)
-        if full_text:
-            print("Texto parcial extraído antes do erro:", full_text[:200])
-        # A exceção será capturada pela função principal em pdi_analyzer.py
+        print(f"ERRO INESPERADO DURANTE O SCRAPING: {e}")
+        # Salva arquivos de debug para qualquer outro erro
+        if 'page' in locals():
+            page.screenshot(path="debug_error.png")
+            with open("debug_error.html", "w", encoding='utf-s') as f:
+                f.write(page.content())
         raise e
         
     finally:
-        # 6. Garantir que o navegador seja sempre fechado
         if browser:
             browser.close()
 
