@@ -100,8 +100,13 @@ def generate_pdi_pdf(pdi_data):
         """Garante string, remove None e quebra linhas longas."""
         if not isinstance(text, str):
             text = str(text)
-        # Força quebra de linhas a cada 80 caracteres para evitar erro do FPDF
-        return "\n".join(textwrap.wrap(text, width=80))
+        # Força quebra mesmo em palavras longas (ex.: URLs, tokens)
+        return "\n".join(textwrap.wrap(
+            text,
+            width=80,
+            break_long_words=True,
+            break_on_hyphens=False
+        ))
 
     pdf.cell(
         0,
