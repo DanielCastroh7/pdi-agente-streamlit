@@ -113,27 +113,25 @@ def get_plano_de_acao_ia(profile, plan):
     return call_gemini_api(prompt, "plano_de_acao_ia")
 
 # --- FUNÇÃO PRINCIPAL DO PROCESSO ---
-def run_full_analysis_process(q_to_ui, user_email):
+def run_full_analysis_process(q_to_ui, user_email, lock_file_path):
     """
-    Função alvo para o multiprocessing. Executa o scraping e a análise em um processo separado.
+    Função alvo para o multiprocessing. Executa o scraping e a análise em um processo separado,
+    gerenciando um arquivo de lock para garantir a execução única.
     """
+    lock_file = Path(lock_file_path)
     try:
-        # --- INÍCIO DA MODIFICAÇÃO ---
-        # REMOVEMOS a flag "--with-deps" para que o comando não peça permissão de administrador.
-        # O arquivo packages.txt já cuidou das dependências do sistema.
-        q_to_ui.put({"status": "info", "message": "Inicializando análise... Verificando navegador..."})
-        try:
-            # O comando agora apenas baixa o binário do navegador.
+        # Otimização para instalar o navegador apenas uma vez
+        q_to_ui.put({"status": "info", "message": "Inicializando análise..."})
+        
+        install_flag = Path("playwright_installed.flag")
+        if not install_flag.exists():
+            q_to_ui.put({"status": "info", "message": "Instalando navegador pela primeira vez (pode levar um minuto)..."})
             subprocess.run(["playwright", "install"], check=True, timeout=180)
-            q_to_ui.put({"status": "info", "message": "Navegador pronto."})
-        except (subprocess.CalledProcessError, subprocess.TimeoutExpired, FileNotFoundError) as e:
-            error_message = f"Falha crítica ao instalar navegador com Playwright: {e}."
-            print(error_message)
-            q_to_ui.put({"status": "error", "message": error_message})
-            return
-        # --- FIM DA MODIFICAÇÃO ---
+            install_flag.touch() # Cria o arquivo flag para não instalar de novo
+        
+        q_to_ui.put({"status": "info", "message": "Navegador pronto."})
 
-        # O resto da sua função continua exatamente igual...
+        # Lógica principal da análise
         q_to_ui.put({"status": "info", "message": "Passo 1/8: Lendo seu perfil no LinkedIn..."})
         pdi_data = load_pdi_data_from_firestore(user_email)
         
@@ -172,7 +170,12 @@ def run_full_analysis_process(q_to_ui, user_email):
         q_to_ui.put({"status": "complete", "data": pdi_data})
 
     except Exception as e:
-        import traceback
         tb_str = traceback.format_exc()
         print(f"ERRO NO PROCESSO: {e}\n{tb_str}")
         q_to_ui.put({"status": "error", "message": f"Ocorreu um erro no processo: {e}"})
+    
+    finally:
+        # Garante que o arquivo de lock seja removido, não importa se o processo
+        # teve sucesso ou falhou, liberando o recurso para o próximo usuário.
+        if lock_file.exists():
+            lock_file.unlink()

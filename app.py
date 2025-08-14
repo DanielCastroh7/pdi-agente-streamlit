@@ -488,17 +488,30 @@ def main():
     elif page == "📊 Meu Diagnóstico":
         st.header("📊 Meu Diagnóstico de Carreira")
         st.markdown("Receba uma análise completa da IA sobre seu plano.")
-        if st.session_state.analysis_process is None:
-            if st.button("Analisar meu PDI com a IA", type="primary"):
-                if not pdi_data.get("profile", {}).get("linkedin_url"):
-                    st.error("Por favor, insira a URL do seu LinkedIn em 'Meu Perfil'.")
-                else:
-                    q = multiprocessing.Manager().Queue()
-                    proc = multiprocessing.Process(target=run_full_analysis_process, args=(q, user_email), daemon=True)
-                    st.session_state.q_from_process = q
-                    st.session_state.analysis_process = proc
-                    proc.start()
-                    st.rerun()
+
+        # --- INÍCIO DA MODIFICAÇÃO DE LOCK ---
+        LOCK_FILE = Path("analysis.lock")
+
+        # Verifica se uma análise já está em andamento no servidor
+        if LOCK_FILE.exists():
+            st.warning("⚠️ Um processo de análise já está em andamento no servidor. Por favor, aguarde alguns minutos e tente novamente.")
+            st.info("Isso garante que cada análise receba os recursos necessários para ser concluída com sucesso.")
+        
+    elif st.session_state.analysis_process is None:
+        if st.button("Analisar meu PDI com a IA", type="primary"):
+            if not pdi_data.get("profile", {}).get("linkedin_url"):
+                st.error("Por favor, insira a URL do seu LinkedIn em 'Meu Perfil'.")
+            else:
+                # Cria o arquivo de lock ANTES de iniciar o processo
+                LOCK_FILE.touch()
+                
+                q = multiprocessing.Manager().Queue()
+                # Passamos o caminho do lock file para o processo filho
+                proc = multiprocessing.Process(target=run_full_analysis_process, args=(q, user_email, str(LOCK_FILE)), daemon=True)
+                st.session_state.q_from_process = q
+                st.session_state.analysis_process = proc
+                proc.start()
+                st.rerun()
         
         if st.session_state.analysis_process is not None:
             status_placeholder = st.empty()
