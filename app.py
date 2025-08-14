@@ -9,6 +9,7 @@ from fpdf import FPDF
 import os
 import firebase_admin
 import textwrap
+import re
 from firebase_admin import credentials
 
 # Importa as funções de autenticação e análise
@@ -78,70 +79,137 @@ def load_pdi_data(user_id):
 
 # --- FUNÇÃO GERADORA DE PDF (CORRIGIDA E APRIMORADA) ---
 def generate_pdi_pdf(pdi_data):
-    """Cria um PDF formatado com o diagnóstico completo do PDI (UTF-8 compatível)."""
-    analysis = pdi_data.get("ai_analysis", {})
-    profile = pdi_data.get("profile", {})
+    """Cria um PDF formatado com o diagnóstico completo do PDI (robusto a UTF-8 e tokens longos)."""
+    analysis = pdi_data.get("ai_analysis", {}) or {}
+    profile = pdi_data.get("profile", {}) or {}
 
     pdf = FPDF()
     pdf.add_page()
     pdf.set_auto_page_break(auto=True, margin=15)
 
-    # Caminho para a fonte UTF-8
+    # --- Fonte com suporte a UTF-8 ---
     font_path = os.path.join(os.path.dirname(__file__), "fonts", "DejaVuSans.ttf")
     if not os.path.exists(font_path):
         raise FileNotFoundError(
             f"Fonte não encontrada em {font_path}. Baixe DejaVuSans.ttf e coloque em /fonts"
         )
-
     pdf.add_font("DejaVu", "", font_path, uni=True)
     pdf.set_font("DejaVu", "", 16)
 
+    # --- Helpers ---
+
     def clean_text(text):
-        """Garante string, remove None e quebra linhas longas."""
+        """Garante string; preserva UTF-8."""
+        if text is None:
+            return ""
         if not isinstance(text, str):
             text = str(text)
-        # Força quebra mesmo em palavras longas (ex.: URLs, tokens)
-        return "\n".join(textwrap.wrap(
-            text,
-            width=80,
-            break_long_words=True,
-            break_on_hyphens=False
-        ))
+        # Normaliza quebras de linha (evita \r solto)
+        return text.replace("\r\n", "\n").replace("\r", "\n")
 
-    pdf.cell(
-        0,
-        10,
-        clean_text(f"PDI Agente: Diagnóstico de Carreira para {profile.get('nome', 'Usuário')}"),
-        0,
-        1,
-        "C",
-    )
-    pdf.ln(10)
+    def split_long_token(token: str, max_w: float) -> str:
+        """
+        Quebra 'token' em pedaços menores que caibam em 'max_w' usando a métrica da fonte atual.
+        Usa heurisca proporcional para não ficar O(n^2).
+        """
+        out = []
+        while token:
+            # se já cabe, fim
+            if pdf.get_string_width(token) <= max_w:
+                out.append(token)
+                break
+
+            # estima quantos caracteres cabem proporcionalmente
+            width_token = pdf.get_string_width(token)
+            ratio = max_w / width_token if width_token > 0 else 0.5
+            # pega ~95% do estimado pra garantir
+            take = max(1, int(len(token) * ratio * 0.95))
+            out.append(token[:take])
+            out.append("\n")  # força próxima linha
+            token = token[take:]
+        return "".join(out)
+
+    def force_wrap_to_width(text: str) -> str:
+        """
+        Garante que nenhuma 'palavra' (sequência sem espaços) ultrapasse a largura útil.
+        Mantém os espaços originais; quebra internamente quando necessário.
+        """
+        # largura útil = página - margens
+        usable_w = pdf.w - pdf.l_margin - pdf.r_margin
+        # Se por algum motivo estiver inválida, define um fallback
+        if usable_w <= 1:
+            usable_w = 180  # mm, valor típico A4 com margens
+
+        # Quebra por linhas primeiro, pra preservar parágrafos
+        lines = text.split("\n")
+        fixed_lines = []
+        for line in lines:
+            if not line:
+                fixed_lines.append("")
+                continue
+
+            # Separa preservando espaços intercalados
+            parts = re.split(r"(\s+)", line)
+            rebuilt = []
+            for part in parts:
+                if not part or part.isspace():
+                    rebuilt.append(part)
+                    continue
+
+                # Parte "sem espaço": pode ser url/token gigante — quebrar se preciso
+                if pdf.get_string_width(part) > usable_w:
+                    rebuilt.append(split_long_token(part, usable_w))
+                else:
+                    rebuilt.append(part)
+
+            fixed_lines.append("".join(rebuilt))
+
+        return "\n".join(fixed_lines)
+
+    def safe_multicell(text: str, h=5):
+        """
+        Multicell protegida:
+        - Move o cursor pro LMARGIN antes de escrever
+        - Força wrap de tokens longos baseado na largura real
+        """
+        if text is None:
+            return
+        pdf.set_x(pdf.l_margin)
+        txt = force_wrap_to_width(clean_text(text))
+        pdf.multi_cell(0, h, txt)
 
     def write_section(title, content):
         if not content:
             return
         pdf.set_font("DejaVu", "", 12)
-        pdf.cell(0, 10, clean_text(title), 0, 1, "L")
+        safe_multicell(title, h=7)
         pdf.set_font("DejaVu", "", 10)
-        pdf.multi_cell(0, 5, clean_text(content))
-        pdf.ln(5)
+        safe_multicell(content, h=5)
+        pdf.ln(2)
 
-    # --- Conteúdo ---
+    # --- Cabeçalho ---
+    safe_multicell(f"PDI Agente: Diagnóstico de Carreira para {profile.get('nome', 'Usuário')}", h=10)
+    pdf.ln(5)
+
+    # --- Conteúdo principal ---
+
+    # 1) Análise geral
     write_section("Análise Geral da IA", analysis.get("analise_geral", "N/A"))
 
+    # 2) Perfil de empresa ideal (dict ou string)
     empresa_ideal = analysis.get("tipo_empresa_ideal", {})
     if isinstance(empresa_ideal, dict):
         empresa_ideal_text = ""
         for key, value in empresa_ideal.items():
             empresa_ideal_text += f"{key.capitalize()}: {value}\n"
-        write_section("Perfil de Empresa Ideal", empresa_ideal_text)
+        write_section("Perfil de Empresa Ideal", empresa_ideal_text.strip())
     else:
         write_section("Perfil de Empresa Ideal", empresa_ideal)
 
+    # 3) Plano SMART (1 ano)
     pdf.set_font("DejaVu", "", 12)
-    pdf.cell(0, 10, clean_text("Plano SMART (Próximo Ano)"), 0, 1, "L")
-    smart_plan = analysis.get("plano_smart_1_ano", {})
+    safe_multicell("Plano SMART (Próximo Ano)", h=7)
+    smart_plan = analysis.get("plano_smart_1_ano", {}) or {}
 
     if isinstance(smart_plan, dict):
         for key in ["S", "M", "A", "R", "T"]:
@@ -150,8 +218,9 @@ def generate_pdi_pdf(pdi_data):
                 continue
 
             pdf.set_font("DejaVu", "", 10)
-            pdf.multi_cell(0, 5, clean_text(f"  - {key.upper()}:"))
+            safe_multicell(f"  - {key.upper()}:")
 
+            # M: lista de objetivos (detalhe + métrica)
             if key == "M" and isinstance(value, list):
                 for idx, item in enumerate(value, start=1):
                     if isinstance(item, dict):
@@ -159,45 +228,78 @@ def generate_pdi_pdf(pdi_data):
                         metrica = item.get("metrica", "")
                         detalhe_text = detalhe if detalhe else json.dumps(item, ensure_ascii=False)
                         if metrica:
-                            pdf.multi_cell(
-                                0, 5, clean_text(f"    {idx}. {detalhe_text}\n       (Métrica: {metrica})")
-                            )
+                            safe_multicell(f"    {idx}. {detalhe_text}\n       (Métrica: {metrica})")
                         else:
-                            pdf.multi_cell(0, 5, clean_text(f"    {idx}. {detalhe_text}"))
+                            safe_multicell(f"    {idx}. {detalhe_text}")
                     else:
-                        pdf.multi_cell(0, 5, clean_text(f"    {idx}. {item}"))
+                        safe_multicell(f"    {idx}. {item}")
                 continue
 
+            # T: cronograma/datas (dict|list|string)
             if key == "T":
                 if isinstance(value, dict):
                     data_limite = (
-                        value.get("Data limite")
-                        or value.get("data limite")
-                        or value.get("data")
+                        value.get("Data limite") or value.get("data limite") or
+                        value.get("Data_limite") or value.get("data_limite") or
+                        value.get("data")
                     )
                     if data_limite:
-                        pdf.multi_cell(0, 5, clean_text(f"    Data limite: {data_limite}"))
+                        safe_multicell(f"    Data limite: {data_limite}")
 
-                    cronograma = value.get("Cronograma") or value.get("cronograma")
+                    cronograma = (
+                        value.get("Cronograma") or value.get("cronograma") or
+                        value.get("Cronogramas") or value.get("Trimestres")
+                    )
                     if isinstance(cronograma, list):
                         for trimestre in cronograma:
                             if isinstance(trimestre, dict):
-                                tr_nome = trimestre.get("Trimestre") or ""
-                                foco = trimestre.get("Foco") or ""
+                                tr_nome = (
+                                    trimestre.get("Trimestre") or trimestre.get("trimestre") or
+                                    trimestre.get("periodo") or ""
+                                )
+                                foco = trimestre.get("Foco") or trimestre.get("foco") or ""
                                 if tr_nome or foco:
-                                    trim_info = f"{tr_nome}"
+                                    trim_info = tr_nome.strip()
                                     if foco:
                                         trim_info += f" - Foco: {foco}"
-                                    pdf.multi_cell(0, 5, clean_text(f"    {trim_info}"))
-                                acoes = trimestre.get("Acoes") or []
-                                for acao in acoes:
-                                    pdf.multi_cell(0, 5, clean_text(f"       - {acao}"))
+                                    safe_multicell(f"    {trim_info}")
+                                acoes = (
+                                    trimestre.get("Acoes") or trimestre.get("acoes") or
+                                    trimestre.get("Ação") or trimestre.get("acoes_list")
+                                )
+                                if isinstance(acoes, list):
+                                    for acao in acoes:
+                                        safe_multicell(f"       - {acao}")
+                                elif acoes:
+                                    safe_multicell(f"       - {acoes}")
+                            else:
+                                safe_multicell(f"    - {trimestre}")
+                    elif isinstance(cronograma, dict):
+                        for tr_key, tr_val in cronograma.items():
+                            foco = ""
+                            acoes = []
+                            if isinstance(tr_val, dict):
+                                foco = tr_val.get("Foco") or tr_val.get("foco") or ""
+                                acoes = tr_val.get("Acoes") or tr_val.get("acoes") or []
+                            else:
+                                acoes = tr_val if isinstance(tr_val, list) else [tr_val]
+                            trim_info = f"{tr_key}"
+                            if foco:
+                                trim_info += f" - Foco: {foco}"
+                            safe_multicell(f"    {trim_info}")
+                            for acao in acoes:
+                                safe_multicell(f"       - {acao}")
+                    else:
+                        # fallback: imprime o dict inteiro formatado
+                        if isinstance(value, dict):
+                            safe_multicell(f"    {json.dumps(value, ensure_ascii=False)}")
                     continue
 
+            # Padrão: S, A, R ou outros formatos
             if isinstance(value, dict):
                 for sub_key, sub_value in value.items():
-                    sub_value_text = ""
                     if isinstance(sub_value, list):
+                        sub_value_text = ""
                         for item in sub_value:
                             if isinstance(item, dict):
                                 for k, v in item.items():
@@ -206,42 +308,42 @@ def generate_pdi_pdf(pdi_data):
                                 sub_value_text += f"      - {item}\n"
                     else:
                         sub_value_text = str(sub_value)
-                    pdf.multi_cell(
-                        0, 5, clean_text(f"    * {sub_key.replace('_', ' ').capitalize()}: \n{sub_value_text}")
-                    )
+                    safe_multicell(f"    * {sub_key.replace('_', ' ').capitalize()}:\n{sub_value_text}")
             else:
-                pdf.multi_cell(0, 5, clean_text(str(value)))
+                safe_multicell(str(value))
 
-    # Recomendações focadas
+    # 4) Recomendações focadas
     recomendacoes = analysis.get("recomendacoes_focadas", [])
     if isinstance(recomendacoes, list) and recomendacoes:
         recomendacoes_text = "\n".join(
-            [f"- {rec.get('foco')}: {rec.get('recomendacao')}" for rec in recomendacoes]
+            f"- {rec.get('foco')}: {rec.get('recomendacao')}" for rec in recomendacoes
         )
         write_section("Recomendações Focadas", recomendacoes_text)
 
-    # Próximos passos
+    # 5) Próximos passos
     write_section(
         "Próximos Passos (3 Meses)",
-        "\n".join([f"- {step}" for step in analysis.get("proximos_passos", [])]),
+        "\n".join(f"- {step}" for step in analysis.get("proximos_passos", [])),
     )
 
-    # Cargos similares
+    # 6) Cargos similares
     write_section(
         "Cargos Similares Sugeridos",
-        "\n".join([f"- {job}" for job in analysis.get("sugestao_cargos_similares", [])]),
+        "\n".join(f"- {job}" for job in analysis.get("sugestao_cargos_similares", [])),
     )
 
-    # Plano de ação IA
-    plano_ia = analysis.get("plano_de_acao_ia", {})
+    # 7) Plano de ação IA
+    plano_ia = analysis.get("plano_de_acao_ia", {}) or {}
     if isinstance(plano_ia, dict):
         for periodo in ["1_ano", "3_anos", "5_anos", "10_anos", "15_anos"]:
-            if plano_ia.get(periodo):
+            itens = plano_ia.get(periodo)
+            if itens:
                 write_section(
                     f"Plano de Ação para {periodo.replace('_', ' ')}",
-                    "\n".join([f"- {item}" for item in plano_ia.get(periodo, [])]),
+                    "\n".join(f"- {item}" for item in itens),
                 )
 
+    # Retorna bytes (mantém compat com streamlit download)
     return pdf.output(dest="S").encode("latin-1")
 
 # --- FUNÇÃO PRINCIPAL DO APP ---
