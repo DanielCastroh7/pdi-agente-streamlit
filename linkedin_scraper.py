@@ -5,13 +5,12 @@ from playwright.sync_api import sync_playwright, TimeoutError
 
 def scrape_linkedin_profile(url: str) -> str:
     """
-    Scraper robusto que tenta detectar páginas de login/captcha e fornece
-    debugging detalhado em caso de falha.
+    Scraper robusto com gerenciamento de ciclo de vida corrigido,
+    deixando o contexto 'with' responsável por todo o encerramento.
     """
-    browser = None
-    try:
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        try:
             context = browser.new_context(
                 user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36"
             )
@@ -20,20 +19,15 @@ def scrape_linkedin_profile(url: str) -> str:
             print("Acessando a URL e aguardando a rede...")
             page.goto(url, wait_until="networkidle", timeout=60000)
 
-            # --- VERIFICAÇÃO DE SEGURANÇA ---
-            # Verifica se o LinkedIn nos redirecionou para uma página de login/segurança
             page_title = page.title()
             print(f"Título da página carregada: '{page_title}'")
             if "Sign In" in page_title or "Entrar" in page_title or "Security" in page_title:
                 raise Exception(f"Página de login ou verificação de segurança detectada. Título: '{page_title}'. O scraping não pode continuar sem autenticação.")
 
-            # Espera pelo conteúdo principal do perfil
             main_content_selector = "main"
             print("Aguardando pelo seletor principal do perfil...")
             page.wait_for_selector(main_content_selector, state="visible", timeout=30000)
             
-            time.sleep(1.5)
-
             print("Extraindo texto...")
             full_text = page.locator(main_content_selector).first.inner_text()
 
@@ -43,27 +37,16 @@ def scrape_linkedin_profile(url: str) -> str:
             print("Scraping concluído com sucesso.")
             return full_text
 
-    except TimeoutError:
-        # Erro específico se o tempo de espera de 30s for atingido
-        print("ERRO DE TIMEOUT: O elemento esperado (perfil principal) não apareceu a tempo.")
-        page.screenshot(path="debug_timeout.png")
-        page.content().encode('utf-8')
-        with open("debug_timeout.html", "w", encoding='utf-8') as f:
-            f.write(page.content())
-        raise Exception("Tempo de espera esgotado. O LinkedIn provavelmente apresentou uma página inesperada (login/CAPTCHA). Verifique os arquivos de debug.")
+        except TimeoutError:
+            print("ERRO DE TIMEOUT: O elemento esperado (perfil principal) não apareceu a tempo.")
+            page.screenshot(path="debug_timeout.png")
+            raise Exception("Tempo de espera esgotado. O LinkedIn provavelmente apresentou uma página inesperada (login/CAPTCHA).")
 
-    except Exception as e:
-        print(f"ERRO INESPERADO DURANTE O SCRAPING: {e}")
-        # Salva arquivos de debug para qualquer outro erro
-        if 'page' in locals():
-            page.screenshot(path="debug_error.png")
-            with open("debug_error.html", "w", encoding='utf-s') as f:
-                f.write(page.content())
-        raise e
-        
-    finally:
-        if browser:
-            browser.close()
+        except Exception as e:
+            print(f"ERRO INESPERADO DURANTE O SCRAPING: {e}")
+            if 'page' in locals():
+                page.screenshot(path="debug_error.png")
+            raise e
 
 # def scrape_linkedin_profile(profile_url: str) -> str:
 #     """
