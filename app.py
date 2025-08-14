@@ -6,6 +6,7 @@ import time
 import multiprocessing
 import queue
 from fpdf import FPDF
+import os
 import firebase_admin
 from firebase_admin import credentials
 
@@ -76,32 +77,51 @@ def load_pdi_data(user_id):
 
 # --- FUNÇÃO GERADORA DE PDF (CORRIGIDA E APRIMORADA) ---
 def generate_pdi_pdf(pdi_data):
-    """Cria um PDF formatado com o diagnóstico completo do PDI."""
+    """Cria um PDF formatado com o diagnóstico completo do PDI (UTF-8 compatível)."""
     analysis = pdi_data.get("ai_analysis", {})
     profile = pdi_data.get("profile", {})
 
     pdf = FPDF()
     pdf.add_page()
     pdf.set_auto_page_break(auto=True, margin=15)
-    pdf.set_font("Helvetica", "B", 16)
+
+    # Caminho para a fonte UTF-8
+    font_path = os.path.join(os.path.dirname(__file__), "fonts", "DejaVuSans.ttf")
+    if not os.path.exists(font_path):
+        raise FileNotFoundError(
+            f"Fonte não encontrada em {font_path}. Baixe DejaVuSans.ttf e coloque em /fonts"
+        )
+
+    pdf.add_font("DejaVu", "", font_path, uni=True)
+    pdf.set_font("DejaVu", "", 16)
 
     def clean_text(text):
+        """Garante string e remove None sem quebrar acentos."""
         if not isinstance(text, str):
             text = str(text)
-        return text.encode('latin-1', 'replace').decode('latin-1')
+        return text
 
-    pdf.cell(0, 10, clean_text(f"PDI Agente: Diagnostico de Carreira para {profile.get('nome', 'Usuario')}"), 0, 1, "C")
+    pdf.cell(
+        0,
+        10,
+        clean_text(f"PDI Agente: Diagnóstico de Carreira para {profile.get('nome', 'Usuário')}"),
+        0,
+        1,
+        "C",
+    )
     pdf.ln(10)
 
     def write_section(title, content):
-        if not content: return
-        pdf.set_font("Helvetica", "B", 12)
+        if not content:
+            return
+        pdf.set_font("DejaVu", "", 12)
         pdf.cell(0, 10, clean_text(title), 0, 1, "L")
-        pdf.set_font("Helvetica", "", 10)
+        pdf.set_font("DejaVu", "", 10)
         pdf.multi_cell(0, 5, clean_text(content))
         pdf.ln(5)
 
-    write_section("Analise Geral da IA", analysis.get("analise_geral", "N/A"))
+    # --- Conteúdo ---
+    write_section("Análise Geral da IA", analysis.get("analise_geral", "N/A"))
 
     empresa_ideal = analysis.get("tipo_empresa_ideal", {})
     if isinstance(empresa_ideal, dict):
@@ -112,125 +132,61 @@ def generate_pdi_pdf(pdi_data):
     else:
         write_section("Perfil de Empresa Ideal", empresa_ideal)
 
-    pdf.set_font("Helvetica", "B", 12)
-    pdf.cell(0, 10, clean_text("Plano SMART (Proximo Ano)"), 0, 1, "L")
+    pdf.set_font("DejaVu", "", 12)
+    pdf.cell(0, 10, clean_text("Plano SMART (Próximo Ano)"), 0, 1, "L")
     smart_plan = analysis.get("plano_smart_1_ano", {})
 
     if isinstance(smart_plan, dict):
-        for key in ['S', 'M', 'A', 'R', 'T']:
+        for key in ["S", "M", "A", "R", "T"]:
             value = smart_plan.get(key)
             if not value:
                 continue
 
-            pdf.set_font("Helvetica", "B", 10)
+            pdf.set_font("DejaVu", "", 10)
             pdf.multi_cell(0, 5, clean_text(f"  - {key.upper()}:"))
-            pdf.set_font("Helvetica", "", 10)
 
-            # Tratamento especial para "M" (lista de objetivos mensuráveis: detalhe + metrica)
-            if key == "M":
-                if isinstance(value, list):
-                    for idx, item in enumerate(value, start=1):
-                        # item esperado: {"detalhe": "...", "metrica": "..."}
-                        if isinstance(item, dict):
-                            detalhe = item.get("detalhe", "")
-                            metrica = item.get("metrica", "")
-                            detalhe_text = detalhe if detalhe else json.dumps(item, ensure_ascii=False)
-                            if metrica:
-                                pdf.multi_cell(0, 5, clean_text(f"    {idx}. {detalhe_text}\n       (Métrica: {metrica})"))
-                            else:
-                                pdf.multi_cell(0, 5, clean_text(f"    {idx}. {detalhe_text}"))
+            if key == "M" and isinstance(value, list):
+                for idx, item in enumerate(value, start=1):
+                    if isinstance(item, dict):
+                        detalhe = item.get("detalhe", "")
+                        metrica = item.get("metrica", "")
+                        detalhe_text = detalhe if detalhe else json.dumps(item, ensure_ascii=False)
+                        if metrica:
+                            pdf.multi_cell(
+                                0, 5, clean_text(f"    {idx}. {detalhe_text}\n       (Métrica: {metrica})")
+                            )
                         else:
-                            pdf.multi_cell(0, 5, clean_text(f"    {idx}. {item}"))
-                    continue
-                # se "M" veio como dict (ou string) cairá no fluxo abaixo
+                            pdf.multi_cell(0, 5, clean_text(f"    {idx}. {detalhe_text}"))
+                    else:
+                        pdf.multi_cell(0, 5, clean_text(f"    {idx}. {item}"))
+                continue
 
-            # Tratamento especial para "T" (Data limite + Cronograma por trimestre com foco e ações)
             if key == "T":
-                # Pode ser dict, list ou string. Tentamos várias heurísticas.
                 if isinstance(value, dict):
-                    # procura por variações de "data limite"
-                    data_limite = value.get("Data limite") or value.get("Data_limite") or value.get("data limite") or value.get("data_limite") or value.get("data")
+                    data_limite = (
+                        value.get("Data limite")
+                        or value.get("data limite")
+                        or value.get("data")
+                    )
                     if data_limite:
                         pdf.multi_cell(0, 5, clean_text(f"    Data limite: {data_limite}"))
-                    # procura por cronograma
-                    cronograma = value.get("Cronograma") or value.get("cronograma") or value.get("Cronogramas") or value.get("Trimestres")
-                    # às vezes o cronograma pode estar direto como dict de trimestres
+
+                    cronograma = value.get("Cronograma") or value.get("cronograma")
                     if isinstance(cronograma, list):
                         for trimestre in cronograma:
                             if isinstance(trimestre, dict):
-                                tr_nome = trimestre.get("Trimestre") or trimestre.get("trimestre") or trimestre.get("periodo") or ""
-                                foco = trimestre.get("Foco") or trimestre.get("foco") or ""
+                                tr_nome = trimestre.get("Trimestre") or ""
+                                foco = trimestre.get("Foco") or ""
                                 if tr_nome or foco:
-                                    trim_info = f"{tr_nome}".strip()
+                                    trim_info = f"{tr_nome}"
                                     if foco:
                                         trim_info += f" - Foco: {foco}"
                                     pdf.multi_cell(0, 5, clean_text(f"    {trim_info}"))
-                                # acoes pode ser lista de strings
-                                acoes = trimestre.get("Acoes") or trimestre.get("acoes") or trimestre.get("Ação") or trimestre.get("acoes_list")
-                                if isinstance(acoes, list):
-                                    for acao in acoes:
-                                        pdf.multi_cell(0, 5, clean_text(f"       - {acao}"))
-                                else:
-                                    # se ações for string
-                                    if acoes:
-                                        pdf.multi_cell(0, 5, clean_text(f"       - {acoes}"))
-                            else:
-                                # trimestre é string
-                                pdf.multi_cell(0, 5, clean_text(f"    - {trimestre}"))
-                    elif isinstance(cronograma, dict):
-                        # dicionário com chaves sendo trimestres
-                        for tr_key, tr_val in cronograma.items():
-                            foco = ""
-                            acoes = []
-                            if isinstance(tr_val, dict):
-                                foco = tr_val.get("Foco") or tr_val.get("foco") or ""
-                                acoes = tr_val.get("Acoes") or tr_val.get("acoes") or []
-                            else:
-                                # tr_val pode já ser lista de ações
-                                if isinstance(tr_val, list):
-                                    acoes = tr_val
-                                else:
-                                    acoes = [tr_val]
-                            trim_info = f"{tr_key}"
-                            if foco:
-                                trim_info += f" - Foco: {foco}"
-                            pdf.multi_cell(0, 5, clean_text(f"    {trim_info}"))
-                            for acao in acoes:
-                                pdf.multi_cell(0, 5, clean_text(f"       - {acao}"))
-                    else:
-                        # se não encontrou cronograma estruturado, tenta detectar se há campos tipo "Trimestre: ..." dentro do próprio dict
-                        found = False
-                        for sub_k, sub_v in value.items():
-                            if "Trimestre" in str(sub_k) or "trimestre" in str(sub_k) or "Trimestre" in str(sub_v):
-                                found = True
-                                pdf.multi_cell(0, 5, clean_text(f"    {sub_k}: {sub_v}"))
-                        if not found:
-                            # fallback: imprime o dict inteiro (formatado)
-                            pdf.multi_cell(0, 5, clean_text(f"    {json.dumps(value, ensure_ascii=False)}"))
-                    continue
-                elif isinstance(value, list):
-                    # lista de trimestres ou ações
-                    for item in value:
-                        if isinstance(item, dict):
-                            tr_nome = item.get("Trimestre") or item.get("trimestre") or ""
-                            foco = item.get("Foco") or item.get("foco") or ""
-                            if tr_nome or foco:
-                                trim_info = f"{tr_nome}"
-                                if foco:
-                                    trim_info += f" - Foco: {foco}"
-                                pdf.multi_cell(0, 5, clean_text(f"    {trim_info}"))
-                            acoes = item.get("Acoes") or item.get("acoes") or []
-                            for acao in acoes:
-                                pdf.multi_cell(0, 5, clean_text(f"       - {acao}"))
-                        else:
-                            pdf.multi_cell(0, 5, clean_text(f"    - {item}"))
-                    continue
-                else:
-                    # string mais livre: só imprime
-                    pdf.multi_cell(0, 5, clean_text(str(value)))
+                                acoes = trimestre.get("Acoes") or []
+                                for acao in acoes:
+                                    pdf.multi_cell(0, 5, clean_text(f"       - {acao}"))
                     continue
 
-            # Tratamento padrão (S, A, R e outros formatos)
             if isinstance(value, dict):
                 for sub_key, sub_value in value.items():
                     sub_value_text = ""
@@ -243,26 +199,43 @@ def generate_pdi_pdf(pdi_data):
                                 sub_value_text += f"      - {item}\n"
                     else:
                         sub_value_text = str(sub_value)
-                    pdf.multi_cell(0, 5, clean_text(f"    * {sub_key.replace('_', ' ').capitalize()}: \n{sub_value_text}"))
+                    pdf.multi_cell(
+                        0, 5, clean_text(f"    * {sub_key.replace('_', ' ').capitalize()}: \n{sub_value_text}")
+                    )
             else:
                 pdf.multi_cell(0, 5, clean_text(str(value)))
-    pdf.ln(5)
 
+    # Recomendações focadas
     recomendacoes = analysis.get("recomendacoes_focadas", [])
     if isinstance(recomendacoes, list) and recomendacoes:
-        recomendacoes_text = "\n".join([f"- {rec.get('foco')}: {rec.get('recomendacao')}" for rec in recomendacoes])
-        write_section("Recomendacoes Focadas", recomendacoes_text)
+        recomendacoes_text = "\n".join(
+            [f"- {rec.get('foco')}: {rec.get('recomendacao')}" for rec in recomendacoes]
+        )
+        write_section("Recomendações Focadas", recomendacoes_text)
 
-    write_section("Proximos Passos (3 Meses)", "\n".join([f"- {step}" for step in analysis.get("proximos_passos", [])]))
-    write_section("Cargos Similares Sugeridos", "\n".join([f"- {job}" for job in analysis.get("sugestao_cargos_similares", [])]))
+    # Próximos passos
+    write_section(
+        "Próximos Passos (3 Meses)",
+        "\n".join([f"- {step}" for step in analysis.get("proximos_passos", [])]),
+    )
 
+    # Cargos similares
+    write_section(
+        "Cargos Similares Sugeridos",
+        "\n".join([f"- {job}" for job in analysis.get("sugestao_cargos_similares", [])]),
+    )
+
+    # Plano de ação IA
     plano_ia = analysis.get("plano_de_acao_ia", {})
     if isinstance(plano_ia, dict):
         for periodo in ["1_ano", "3_anos", "5_anos", "10_anos", "15_anos"]:
             if plano_ia.get(periodo):
-                write_section(f"Plano de Acao para {periodo.replace('_', ' ')}", "\n".join([f"- {item}" for item in plano_ia.get(periodo, [])]))
+                write_section(
+                    f"Plano de Ação para {periodo.replace('_', ' ')}",
+                    "\n".join([f"- {item}" for item in plano_ia.get(periodo, [])]),
+                )
 
-    return pdf.output(dest='S').encode('latin-1')
+    return pdf.output(dest="S").encode("latin-1")
 
 # --- FUNÇÃO PRINCIPAL DO APP ---
 def main():
