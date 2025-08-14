@@ -4,6 +4,8 @@ import json
 from pathlib import Path
 import traceback
 from datetime import date, timedelta
+import subprocess
+import os
 
 # Importa a função de scraping
 from linkedin_scraper import scrape_linkedin_profile
@@ -30,7 +32,7 @@ except (AttributeError, KeyError, FileNotFoundError, ImportError):
         print("AVISO: Chave da API do Gemini não configurada em st.secrets ou config.py.")
         pass
 
-model = genai.GenerativeModel('gemini-1.5-pro')
+model = genai.GenerativeModel('gemini-2.5-pro')
 
 # --- FUNÇÕES DE ANÁLISE DA IA (SEPARADAS) ---
 
@@ -116,6 +118,22 @@ def run_full_analysis_process(q_to_ui, user_email):
     Função alvo para o multiprocessing. Executa o scraping e a análise em um processo separado.
     """
     try:
+        # --- INÍCIO DA MODIFICAÇÃO ---
+        # Adicionamos este bloco para instalar o Playwright e suas dependências no ambiente da nuvem.
+        q_to_ui.put({"status": "info", "message": "Inicializando análise... Verificando dependências do navegador..."})
+        try:
+            # O comando "--with-deps" ajuda a instalar bibliotecas do sistema necessárias
+            # O timeout evita que o processo fique preso indefinidamente.
+            subprocess.run(["playwright", "install", "--with-deps"], check=True, timeout=180)
+            q_to_ui.put({"status": "info", "message": "Dependências prontas."})
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired, FileNotFoundError) as e:
+            # Se o comando falhar, envia uma mensagem de erro clara e interrompe o processo.
+            error_message = f"Falha crítica ao instalar dependências do navegador com Playwright: {e}. Isso pode ocorrer em ambientes sem permissão. Tente reiniciar o app."
+            print(error_message) # Log no terminal
+            q_to_ui.put({"status": "error", "message": error_message})
+            return # Interrompe a execução
+        # --- FIM DA MODIFICAÇÃO ---
+
         q_to_ui.put({"status": "info", "message": "Passo 1/8: Lendo seu perfil no LinkedIn..."})
         pdi_data = load_pdi_data_from_firestore(user_email)
         
