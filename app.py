@@ -350,7 +350,7 @@ def generate_pdi_pdf(pdi_data):
 
     #return pdf.output(dest="S").encode("latin-1")
 
-    return pdf.output()
+    return bytes(pdf.output())
 
 # --- FUNÇÃO PRINCIPAL DO APP ---
 def main():
