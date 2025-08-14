@@ -344,7 +344,7 @@ def generate_pdi_pdf(pdi_data):
                 )
 
     # Retorna bytes (mantém compat com streamlit download)
-    return pdf.output(dest="S").encode("latin-1")
+    return pdf.output(dest="S")
 
 # --- FUNÇÃO PRINCIPAL DO APP ---
 def main():
