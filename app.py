@@ -347,8 +347,10 @@ def generate_pdi_pdf(pdi_data):
 
     # data = pdf.output(dest="S")
     # return data if isinstance(data, (bytes, bytearray)) else data.encode("latin-1")
-    
-    return pdf.output(dest="S").encode("latin-1")
+
+    #return pdf.output(dest="S").encode("latin-1")
+
+    return pdf.output()
 
 # --- FUNÇÃO PRINCIPAL DO APP ---
 def main():
