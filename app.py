@@ -350,7 +350,58 @@ def generate_pdi_pdf(pdi_data):
 def main():
     st.set_page_config(page_title="PDI Agente", layout="wide", initial_sidebar_state="auto")
 
-    #firebase_initialized = initialize_firebase()
+    st.markdown("""
+        <style>
+            /* Altera a aparência dos botões */
+            .stButton > button {
+                border-radius: 20px;
+                border: 2px solid #4A90E2;
+                color: #4A90E2;
+                background-color: transparent;
+                transition: all 0.3s ease-in-out;
+            }
+            .stButton > button:hover {
+                transform: scale(1.05);
+                border-color: #357ABD;
+                color: white;
+                background-color: #357ABD;
+            }
+            .stButton > button:active {
+                transform: scale(0.95);
+            }
+
+            /* Estilo dos containers com borda (usado em "Meu Plano de Carreira") */
+            [data-testid="stVerticalBlockBorderWrapper"] {
+                background-color: #FFFFFF;
+                border-radius: 10px;
+                padding: 20px;
+                box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            }
+            
+            /* Ajustes na sidebar */
+            [data-testid="stSidebar"] {
+                background-color: #FFFFFF;
+            }
+
+            /* Estilo dos tabs */
+            .stTabs [data-baseweb="tab-list"] {
+                gap: 24px;
+            }
+            .stTabs [data-baseweb="tab"] {
+                height: 50px;
+                white-space: pre-wrap;
+                background-color: transparent;
+                border-radius: 4px 4px 0px 0px;
+                gap: 1px;
+                padding-top: 10px;
+                padding-bottom: 10px;
+            }
+            .stTabs [aria-selected="true"] {
+                background-color: #FFFFFF;
+            }
+
+        </style>
+    """, unsafe_allow_html=True)
     
     # --- INICIALIZAÇÃO DO ESTADO DA SESSÃO ---
     if 'logged_in_user' not in st.session_state: st.session_state.logged_in_user = None
