@@ -8,6 +8,7 @@ import queue
 from fpdf import FPDF
 import os
 import firebase_admin
+import textwrap
 from firebase_admin import credentials
 
 # Importa as funções de autenticação e análise
@@ -96,10 +97,11 @@ def generate_pdi_pdf(pdi_data):
     pdf.set_font("DejaVu", "", 16)
 
     def clean_text(text):
-        """Garante string e remove None sem quebrar acentos."""
+        """Garante string, remove None e quebra linhas longas."""
         if not isinstance(text, str):
             text = str(text)
-        return text
+        # Força quebra de linhas a cada 80 caracteres para evitar erro do FPDF
+        return "\n".join(textwrap.wrap(text, width=80))
 
     pdf.cell(
         0,
