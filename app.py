@@ -621,7 +621,12 @@ def main():
                 
                 # Se o limite foi atingido, mas é um power user, mostra a opção de continuar
                 if limit_reached and is_power_user:
-                    st.warning("Você atingiu o limite de análises. Como administrador, você pode continuar.")
+                    #st.warning("Você atingiu o limite de análises. Como administrador, você pode continuar.")
+                    st.warning(
+                        f"Você atingiu o seu limite de 2 análises por mês. "
+                        f"É bom dar tempo para seus planos amadurecerem! "
+                        f"Você poderá realizar uma nova análise em **{days_to_wait} dia(s)**."
+                    )
                     if st.button("Continuar (Admin)"):
                         start_analysis()
 
