@@ -473,7 +473,13 @@ def main():
 
     st.sidebar.title("Menu de Navegação")
     st.sidebar.info(f"**Usuário:** {user_email}")
-    page = st.sidebar.radio("Escolha uma seção:", ["👤 Meu Perfil", "🚀 Meu Plano de Carreira", "📊 Meu Diagnóstico"])
+
+    # Adicionamos label_visibility="collapsed" para esconder o texto "Escolha uma seção:"
+    page = st.sidebar.radio(
+        "Escolha uma seção:",
+        ["👤 Meu Perfil", "🚀 Meu Plano de Carreira", "📊 Meu Diagnóstico"],
+        label_visibility="collapsed" 
+    )
     if st.sidebar.button("Logout"):
         st.session_state.logged_in_user = None
         st.rerun()
