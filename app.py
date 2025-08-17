@@ -12,6 +12,7 @@ import multiprocessing
 from pathlib import Path
 from firebase_admin import credentials
 from datetime import datetime, timedelta
+from streamlit_option_menu import option_menu
 
 # Importa as funções de autenticação e análise
 from auth import (
@@ -471,15 +472,30 @@ def main():
     user_email = st.session_state.logged_in_user
     pdi_data = load_pdi_data(user_email)
 
-    st.sidebar.title("Menu de Navegação")
-    st.sidebar.info(f"**Usuário:** {user_email}")
+    # st.sidebar.title("Menu de Navegação")
+    # st.sidebar.info(f"**Usuário:** {user_email}")
+    # page = st.sidebar.radio(
+    #     "Escolha uma seção:",
+    #     ["👤 Meu Perfil", "🚀 Meu Plano de Carreira", "📊 Meu Diagnóstico"],
+    #     label_visibility="collapsed" 
+    # )
+    with st.sidebar:
+        st.info(f"**Usuário:** {user_email}")
 
-    # Adicionamos label_visibility="collapsed" para esconder o texto "Escolha uma seção:"
-    page = st.sidebar.radio(
-        "Escolha uma seção:",
-        ["👤 Meu Perfil", "🚀 Meu Plano de Carreira", "📊 Meu Diagnóstico"],
-        label_visibility="collapsed" 
-    )
+        page = option_menu(
+            menu_title="Menu Principal", # Título do menu
+            options=["Meu Perfil", "Meu Plano de Carreira", "Meu Diagnóstico"], # Opções
+            icons=["person-circle", "rocket-takeoff", "clipboard-data-fill"], # Ícones do Bootstrap
+            menu_icon="cast", # Ícone do menu
+            default_index=0, # Item que começa selecionado
+            styles={
+                "container": {"padding": "0!important", "background-color": "#fafafa"},
+                "icon": {"color": "black", "font-size": "20px"},
+                "nav-link": {"font-size": "16px", "text-align": "left", "margin":"0px", "--hover-color": "#eee"},
+                "nav-link-selected": {"background-color": "#4A90E2"},
+            }
+        )
+
     if st.sidebar.button("Logout"):
         st.session_state.logged_in_user = None
         st.rerun()

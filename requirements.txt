@@ -5,3 +5,4 @@ nest-asyncio
 fpdf2
 bcrypt
 firebase-admin
+streamlit-option-menu
