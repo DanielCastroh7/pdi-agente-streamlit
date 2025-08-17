@@ -488,6 +488,7 @@ def main():
             icons=["person-circle", "rocket-takeoff", "clipboard-data-fill"], # Ícones do Bootstrap
             menu_icon="cast", # Ícone do menu
             default_index=0, # Item que começa selecionado
+            orientation="horizontal",
             styles={
                 "container": {"padding": "0!important", "background-color": "#fafafa"},
                 "icon": {"color": "black", "font-size": "20px"},
