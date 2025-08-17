@@ -484,13 +484,13 @@ def main():
 
         page = option_menu(
             menu_title="Menu Principal", # Título do menu
-            options=["👤 Meu Perfil", "🚀 Meu Plano de Carreira", "📊 Meu Diagnóstico"], # Opções
-            #icons=["person-circle", "rocket-takeoff", "clipboard-data-fill"], # Ícones do Bootstrap
+            options=["Meu Perfil", "Meu Plano de Carreira", "Meu Diagnóstico"], # Opções
+            icons=["person-circle", "rocket-takeoff", "clipboard-data-fill"], # Ícones do Bootstrap
             menu_icon="cast", # Ícone do menu
             default_index=0, # Item que começa selecionado
             styles={
                 "container": {"padding": "0!important", "background-color": "#fafafa"},
-                #"icon": {"color": "black", "font-size": "20px"},
+                "icon": {"color": "black", "font-size": "20px"},
                 "nav-link": {"font-size": "13px", "text-align": "left", "margin":"0px", "--hover-color": "#eee"},
                 "nav-link-selected": {"background-color": "#4A90E2"},
             }
@@ -502,7 +502,7 @@ def main():
 
     st.title("👨‍🚀 PDI Agente")
 
-    if page == "👤 Meu Perfil":
+    if page == "Meu Perfil":
         st.header("👤 Meu Perfil")
         st.markdown("Informações essenciais para que a IA entenda seu contexto profissional.")
         with st.form("profile_form"):
@@ -548,7 +548,7 @@ def main():
                 save_pdi_data(user_email, pdi_data)
                 st.success("Perfil salvo com sucesso!")
 
-    elif page == "🚀 Meu Plano de Carreira":
+    elif page == "Meu Plano de Carreira":
         st.header("🚀 Meu Plano de Carreira")
         st.markdown("Defina suas metas de longo prazo. Seja ambicioso! A IA ajudará a traçar o caminho.")
         with st.form("pdi_plan_form"):
@@ -587,7 +587,7 @@ def main():
                 save_pdi_data(user_email, pdi_data)
                 st.success("Seu plano de carreira foi salvo!")
 
-    elif page == "📊 Meu Diagnóstico":
+    elif page == "Meu Diagnóstico":
         st.header("📊 Meu Diagnóstico de Carreira")
         st.markdown("Receba uma análise completa da IA sobre seu plano.")
 
