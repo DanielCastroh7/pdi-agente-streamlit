@@ -484,7 +484,7 @@ def main():
 
         page = option_menu(
             menu_title="Menu Principal", # Título do menu
-            options=["Meu Perfil", "Meu Plano de Carreira", "Meu Diagnóstico"], # Opções
+            options=["Meu Perfil", "Plano de Carreira", "Meu Diagnóstico"], # Opções
             icons=["person-circle", "rocket-takeoff", "clipboard-data-fill"], # Ícones do Bootstrap
             menu_icon="cast", # Ícone do menu
             default_index=0, # Item que começa selecionado
@@ -549,7 +549,7 @@ def main():
                 save_pdi_data(user_email, pdi_data)
                 st.success("Perfil salvo com sucesso!")
 
-    elif page == "Meu Plano de Carreira":
+    elif page == "Plano de Carreira":
         st.header("🚀 Meu Plano de Carreira")
         st.markdown("Defina suas metas de longo prazo. Seja ambicioso! A IA ajudará a traçar o caminho.")
         with st.form("pdi_plan_form"):
