@@ -484,7 +484,7 @@ def main():
 
         page = option_menu(
             menu_title="Menu Principal", # Título do menu
-            options=["Meu Perfil", "Meu Plano de Carreira", "Meu Diagnóstico"], # Opções
+            options=["👤 Meu Perfil", "🚀 Meu Plano de Carreira", "📊 Meu Diagnóstico"], # Opções
             icons=["person-circle", "rocket-takeoff", "clipboard-data-fill"], # Ícones do Bootstrap
             menu_icon="cast", # Ícone do menu
             default_index=0, # Item que começa selecionado
