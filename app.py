@@ -622,6 +622,9 @@ def main():
                 # Se o limite foi atingido, mas é um power user, mostra a opção de continuar
                 if limit_reached and is_power_user:
                     #st.warning("Você atingiu o limite de análises. Como administrador, você pode continuar.")
+                    oldest_recent_ts = min(recent_analyses)
+                    next_available_date = oldest_recent_ts + timedelta(days=30)
+                    days_to_wait = (next_available_date - datetime.now()).days + 1 # +1 para arredondar pra cima
                     st.warning(
                         f"Você atingiu o seu limite de 2 análises por mês. "
                         f"É bom dar tempo para seus planos amadurecerem! "
