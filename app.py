@@ -1,16 +1,17 @@
 # app.py
-import streamlit as st
-import json
-from pathlib import Path
-import time
-import multiprocessing
-import queue
-from fpdf import FPDF
 import os
-import firebase_admin
-import textwrap
 import re
+import json
+import time
+import queue
+import textwrap
+import firebase_admin
+from fpdf import FPDF
+import streamlit as st
+import multiprocessing
+from pathlib import Path
 from firebase_admin import credentials
+from datetime import datetime, timedelta
 
 # Importa as funções de autenticação e análise
 from auth import (
@@ -567,18 +568,78 @@ def main():
     elif page == "📊 Meu Diagnóstico":
         st.header("📊 Meu Diagnóstico de Carreira")
         st.markdown("Receba uma análise completa da IA sobre seu plano.")
-        if st.session_state.analysis_process is None:
-            if st.button("Analisar meu PDI com a IA", type="primary"):
-                if not pdi_data.get("profile", {}).get("linkedin_url"):
-                    st.error("Por favor, insira a URL do seu LinkedIn em 'Meu Perfil'.")
-                else:
-                    q = multiprocessing.Manager().Queue()
-                    proc = multiprocessing.Process(target=run_full_analysis_process, args=(q, user_email), daemon=True)
-                    st.session_state.q_from_process = q
-                    st.session_state.analysis_process = proc
-                    proc.start()
-                    st.rerun()
+
+        # --- INÍCIO DA LÓGICA DE LIMITE DE ANÁLISE ---
         
+        # Lista de usuários que podem ignorar o limite
+        power_users = ["daniel.castroh7@gmail.com"] 
+        is_power_user = user_email in power_users
+
+        # Pega o histórico de análises do usuário no Firebase
+        usage_data = pdi_data.get("usage_tracking", {})
+        analysis_timestamps_str = usage_data.get("analysis_timestamps", [])
+        
+        # Converte as strings de data para objetos datetime
+        analysis_timestamps = [datetime.fromisoformat(ts) for ts in analysis_timestamps_str]
+
+        # Define o período de 30 dias
+        thirty_days_ago = datetime.now() - timedelta(days=30)
+        
+        # Filtra as análises que ocorreram nos últimos 30 dias
+        recent_analyses = [ts for ts in analysis_timestamps if ts > thirty_days_ago]
+        
+        limit_reached = len(recent_analyses) >= 2
+        
+        # Função para iniciar a análise (evita repetição de código)
+        def start_analysis():
+            # Registra o novo timestamp de uso ANTES de iniciar
+            new_timestamp = datetime.now().isoformat()
+            analysis_timestamps_str.append(new_timestamp)
+            pdi_data.setdefault("usage_tracking", {})["analysis_timestamps"] = analysis_timestamps_str
+            save_pdi_data(user_email, pdi_data)
+
+            # Inicia o processo de análise
+            q = multiprocessing.Manager().Queue()
+            proc = multiprocessing.Process(target=run_full_analysis_process, args=(q, user_email), daemon=True)
+            st.session_state.q_from_process = q
+            st.session_state.analysis_process = proc
+            proc.start()
+            st.rerun()
+
+        # Verifica se um processo já está rodando (lógica anterior mantida)
+        if st.session_state.analysis_process is None:
+            
+            if not limit_reached or is_power_user:
+                # Se o limite NÃO foi atingido OU se é um power user
+                
+                # Exibe o botão principal
+                if st.button("Analisar meu PDI com a IA", type="primary"):
+                    if not pdi_data.get("profile", {}).get("linkedin_url"):
+                        st.error("Por favor, insira a URL do seu LinkedIn em 'Meu Perfil'.")
+                    else:
+                        start_analysis()
+                
+                # Se o limite foi atingido, mas é um power user, mostra a opção de continuar
+                if limit_reached and is_power_user:
+                    st.warning("Você atingiu o limite de análises. Como administrador, você pode continuar.")
+                    if st.button("Continuar (Admin)"):
+                        start_analysis()
+
+            else:
+                # Se o limite foi atingido e NÃO é um power user
+                oldest_recent_ts = min(recent_analyses)
+                next_available_date = oldest_recent_ts + timedelta(days=30)
+                days_to_wait = (next_available_date - datetime.now()).days + 1 # +1 para arredondar pra cima
+
+                st.warning(
+                    f"Você atingiu o seu limite de 2 análises por mês. "
+                    f"É bom dar tempo para seus planos amadurecerem! "
+                    f"Você poderá realizar uma nova análise em **{days_to_wait} dia(s)**."
+                )
+                st.button("Analisar meu PDI com a IA", type="primary", disabled=True)
+        
+        # --- FIM DA LÓGICA DE LIMITE DE ANÁLISE ---
+
         if st.session_state.analysis_process is not None:
             status_placeholder = st.empty()
             try:
@@ -588,6 +649,7 @@ def main():
                     if msg.get("status") == "complete":
                         st.success("Análise concluída!")
                         st.balloons()
+                        # A linha abaixo já salva o pdi_data, que agora contém o novo timestamp
                         save_pdi_data(user_email, msg.get("data"))
                         st.session_state.analysis_process = None
                         st.rerun()
@@ -637,7 +699,6 @@ def main():
                             if not value: continue
                             
                             st.markdown(f"**{key.upper()}:**")
-                            # Tratamento M no Streamlit (lista de dicts com detalhe + metrica)
                             if key == "M":
                                 if isinstance(value, list):
                                     for idx, item in enumerate(value, start=1):
@@ -651,16 +712,13 @@ def main():
                                         else:
                                             st.markdown(f"- {item}")
                                     continue
-                                # se não for lista, cairá no fluxo padrão abaixo
 
-                            # Tratamento T no Streamlit (data limite + cronograma)
                             if key == "T":
                                 if isinstance(value, dict):
                                     data_limite = value.get("Data limite") or value.get("Data_limite") or value.get("data limite") or value.get("data_limite") or value.get("data")
                                     if data_limite:
                                         st.write(f"**Data limite:** {data_limite}")
                                     cronograma = value.get("Cronograma") or value.get("cronograma") or value.get("Trimestre") or value.get("trimestres") or value.get("Trimestres")
-                                    # Cronograma como lista
                                     if isinstance(cronograma, list):
                                         for trimestre in cronograma:
                                             if isinstance(trimestre, dict):
@@ -694,9 +752,7 @@ def main():
                                                 st.markdown(f"- {acao}")
                                         continue
                                     else:
-                                        # fallback: imprime o dict inteiro de forma legível
                                         for sub_k, sub_v in value.items():
-                                            # ignora campos já mostrados
                                             if sub_k in ("Data limite", "Data_limite", "Cronograma", "cronograma"):
                                                 continue
                                             st.markdown(f"*{sub_k}*")
@@ -723,7 +779,6 @@ def main():
                                     st.write(value)
                                     continue
 
-                            # Fluxo genérico (S, A, R ou outros formatos)
                             if isinstance(value, dict):
                                 for sub_key, sub_value in value.items():
                                     sub_key_formatted = sub_key.replace('_', ' ').capitalize()

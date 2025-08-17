@@ -164,6 +164,9 @@ def register_user(email: str, password: str, name: str) -> bool:
         "pdi_plan": {
             "objetivo_final": "",
             "metas_temporais": {}
+        },
+        "usage_tracking": {
+            "analysis_timestamps": []
         }
     }
     
