@@ -485,12 +485,12 @@ def main():
         page = option_menu(
             menu_title="Menu Principal", # Título do menu
             options=["👤 Meu Perfil", "🚀 Meu Plano de Carreira", "📊 Meu Diagnóstico"], # Opções
-            icons=["person-circle", "rocket-takeoff", "clipboard-data-fill"], # Ícones do Bootstrap
+            #icons=["person-circle", "rocket-takeoff", "clipboard-data-fill"], # Ícones do Bootstrap
             menu_icon="cast", # Ícone do menu
             default_index=0, # Item que começa selecionado
             styles={
                 "container": {"padding": "0!important", "background-color": "#fafafa"},
-                "icon": {"color": "black", "font-size": "20px"},
+                #"icon": {"color": "black", "font-size": "20px"},
                 "nav-link": {"font-size": "16px", "text-align": "left", "margin":"0px", "--hover-color": "#eee"},
                 "nav-link-selected": {"background-color": "#4A90E2"},
             }
