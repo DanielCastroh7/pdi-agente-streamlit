@@ -417,7 +417,9 @@ def main():
 
         col1, col2, col3 = st.columns([1, 2, 1]) # Colunas para centralizar
         with col2:
-            st.image("assets/logo.png", width=250) # Use o caminho relativo
+            col11, col22, col33 = st.columns([1, 2, 1])
+            with col22:
+                st.image("assets/logo.png", width=250) # Use o caminho relativo
 
             st.title("Bem-vindo ao PDI Agente 👨‍🚀")
             
