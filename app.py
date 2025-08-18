@@ -419,59 +419,59 @@ def main():
         with col2:
             st.image("assets/logo.png", width=250) # Use o caminho relativo
 
-        st.title("Bem-vindo ao PDI Agente 👨‍🚀")
-        
-        #if not firebase_initialized:
-        #    st.error("Falha na conexão com o banco de dados. Verifique as credenciais do Firebase no Streamlit Cloud Secrets.")
-        #    return
-        
-        login_tab, register_tab, forgot_tab = st.tabs(["Login", "Registrar", "Esqueci a Senha"])
-
-        with login_tab:
-            st.subheader("Login")
-            with st.form("login_form"):
-                email = st.text_input("E-mail")
-                password = st.text_input("Senha", type="password")
-                if st.form_submit_button("Entrar"):
-                    if login_user(email, password):
-                        st.session_state.logged_in_user = email
-                        st.rerun()
-                    else:
-                        st.error("E-mail ou senha inválidos.")
-        
-        with register_tab:
-            st.subheader("Criar Nova Conta")
-            with st.form("register_form"):
-                name = st.text_input("Nome Completo")
-                email = st.text_input("E-mail para login")
-                password = st.text_input("Crie uma senha", type="password")
-                if st.form_submit_button("Registrar"):
-                    if register_user(email, password, name):
-                        st.success("Usuário registrado com sucesso! Faça o login para continuar.")
-                    else:
-                        st.error("Este e-mail já está em uso.")
-
-        with forgot_tab:
-            st.subheader("Recuperar Senha")
-            with st.form("forgot_form"):
-                email = st.text_input("Digite o e-mail da sua conta")
-                if st.form_submit_button("Enviar E-mail de Recuperação"):
-                    if set_password_reset_token(email):
-                        st.success("Se este e-mail estiver cadastrado, um e-mail de recuperação foi enviado. Verifique sua caixa de entrada e spam.")
-                    else:
-                        st.success("Se este e-mail estiver cadastrado, um e-mail de recuperação foi enviado. Verifique sua caixa de entrada e spam.")
+            st.title("Bem-vindo ao PDI Agente 👨‍🚀")
             
-            st.markdown("---")
-            with st.form("reset_form"):
-                token_input = st.text_input("Cole o token recebido por e-mail aqui")
-                new_password = st.text_input("Digite sua nova senha", type="password")
-                if st.form_submit_button("Redefinir Senha"):
-                    success, message = reset_password_with_token(token_input, new_password)
-                    if success:
-                        st.success(message)
-                    else:
-                        st.error(message)
-        return
+            #if not firebase_initialized:
+            #    st.error("Falha na conexão com o banco de dados. Verifique as credenciais do Firebase no Streamlit Cloud Secrets.")
+            #    return
+            
+            login_tab, register_tab, forgot_tab = st.tabs(["Login", "Registrar", "Esqueci a Senha"])
+
+            with login_tab:
+                st.subheader("Login")
+                with st.form("login_form"):
+                    email = st.text_input("E-mail")
+                    password = st.text_input("Senha", type="password")
+                    if st.form_submit_button("Entrar"):
+                        if login_user(email, password):
+                            st.session_state.logged_in_user = email
+                            st.rerun()
+                        else:
+                            st.error("E-mail ou senha inválidos.")
+            
+            with register_tab:
+                st.subheader("Criar Nova Conta")
+                with st.form("register_form"):
+                    name = st.text_input("Nome Completo")
+                    email = st.text_input("E-mail para login")
+                    password = st.text_input("Crie uma senha", type="password")
+                    if st.form_submit_button("Registrar"):
+                        if register_user(email, password, name):
+                            st.success("Usuário registrado com sucesso! Faça o login para continuar.")
+                        else:
+                            st.error("Este e-mail já está em uso.")
+
+            with forgot_tab:
+                st.subheader("Recuperar Senha")
+                with st.form("forgot_form"):
+                    email = st.text_input("Digite o e-mail da sua conta")
+                    if st.form_submit_button("Enviar E-mail de Recuperação"):
+                        if set_password_reset_token(email):
+                            st.success("Se este e-mail estiver cadastrado, um e-mail de recuperação foi enviado. Verifique sua caixa de entrada e spam.")
+                        else:
+                            st.success("Se este e-mail estiver cadastrado, um e-mail de recuperação foi enviado. Verifique sua caixa de entrada e spam.")
+                
+                st.markdown("---")
+                with st.form("reset_form"):
+                    token_input = st.text_input("Cole o token recebido por e-mail aqui")
+                    new_password = st.text_input("Digite sua nova senha", type="password")
+                    if st.form_submit_button("Redefinir Senha"):
+                        success, message = reset_password_with_token(token_input, new_password)
+                        if success:
+                            st.success(message)
+                        else:
+                            st.error(message)
+            return
 
     # --- APLICAÇÃO PRINCIPAL (SÓ APARECE SE ESTIVER LOGADO) ---
     user_email = st.session_state.logged_in_user
