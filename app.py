@@ -490,12 +490,13 @@ def main():
         st.info(f"**Usuário:** {user_email}")
 
         page = option_menu(
-            menu_title="Menu Principal", # Título do menu
+            menu_title=None,
+            #menu_title="Menu Principal", # Título do menu
             options=["Meu Perfil", "Plano de Carreira", "Meu Diagnóstico"], # Opções
             icons=["person-circle", "rocket-takeoff", "clipboard-data-fill"], # Ícones do Bootstrap
             menu_icon="cast", # Ícone do menu
             default_index=0, # Item que começa selecionado
-            orientation="horizontal",
+            #orientation="horizontal",
             styles={
                 "container": {"padding": "0!important", "background-color": "#fafafa"},
                 "icon": {"color": "black", "font-size": "20px"},
