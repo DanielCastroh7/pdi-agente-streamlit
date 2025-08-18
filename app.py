@@ -415,10 +415,11 @@ def main():
     # --- LÓGICA DE AUTENTICAÇÃO ---
     if not st.session_state.logged_in_user:
 
-        col1, col2, col3 = st.columns([1, 2, 1]) # Colunas para centralizar
-        with col2:
-            st.image("assets/logo.png", width=250) # Use o caminho relativo
+        col1, col2, col3 = st.columns([1, 2, 3]) # Colunas para centralizar
 
+        with col3:
+            st.image("assets/logo.png", width=250) # Use o caminho relativo
+        with col2:
             st.title("Bem-vindo ao PDI Agente 👨‍🚀")
             
             #if not firebase_initialized:
