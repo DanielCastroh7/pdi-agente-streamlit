@@ -438,7 +438,7 @@ def main():
             login_tab, register_tab, forgot_tab = st.tabs(["Login", "Registrar", "Esqueci a Senha"])
 
             with login_tab:
-                st.subheader("Login")
+                #st.subheader("Login")
                 with st.form("login_form"):
                     email = st.text_input("E-mail")
                     password = st.text_input("Senha", type="password")
@@ -450,7 +450,7 @@ def main():
                             st.error("E-mail ou senha inválidos.")
             
             with register_tab:
-                st.subheader("Criar Nova Conta")
+                #st.subheader("Criar Nova Conta")
                 with st.form("register_form"):
                     name = st.text_input("Nome Completo")
                     email = st.text_input("E-mail para login")
@@ -462,7 +462,7 @@ def main():
                             st.error("Este e-mail já está em uso.")
 
             with forgot_tab:
-                st.subheader("Recuperar Senha")
+                #st.subheader("Recuperar Senha")
                 with st.form("forgot_form"):
                     email = st.text_input("Digite o e-mail da sua conta")
                     if st.form_submit_button("Enviar E-mail de Recuperação"):
