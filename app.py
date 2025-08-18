@@ -402,12 +402,12 @@ def main():
                 background-color: #FFFFFF;
             }
 
-            /* --- NOVO CÓDIGO PARA AJUSTAR O ESPAÇAMENTO DO TÍTULO --- */
-            /* Seleciona o container do título principal (h1) na tela de login */
-            [data-testid="stHeading"] {
-                margin-top: -60px !important; /* Puxa o título para cima */
-                margin-bottom: 20px !important; /* Garante um espaço mínimo abaixo dele */
-            }
+            # /* --- NOVO CÓDIGO PARA AJUSTAR O ESPAÇAMENTO DO TÍTULO --- */
+            # /* Seleciona o container do título principal (h1) na tela de login */
+            # [data-testid="stHeading"] {
+            #     margin-top: -60px !important; /* Puxa o título para cima */
+            #     margin-bottom: 20px !important; /* Garante um espaço mínimo abaixo dele */
+            # }
             /* --- FIM DO NOVO CÓDIGO --- */
 
         </style>
